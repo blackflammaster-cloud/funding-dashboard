@@ -47,8 +47,8 @@
             <div class="flex items-center gap-3">
                 <div class="bg-yellow-500 text-black p-2 rounded-lg font-bold text-xl">K</div>
                 <div>
-                    <h1 class="text-xl font-bold">Funding Arbitrage <span class="text-yellow-500">PRO v2.2</span></h1>
-                    <div id="last-update" class="text-xs text-gray-500">正在掃描全球市場...</div>
+                    <h1 class="text-xl font-bold">Funding Arbitrage <span class="text-yellow-500">PRO v2.3</span></h1>
+                    <div id="last-update" class="text-xs text-gray-500">正在掃描全球市場... (API 實時聯動版)</div>
                 </div>
             </div>
             
@@ -163,7 +163,7 @@
         </div>
 
         <footer class="mt-8 text-center text-gray-600 text-[10px]">
-            數據每 60 秒自動同步 • 版本 v2.2 (現貨聯動版) • APR 以 8 小時 / 1 小時費率復合計算
+            數據每 60 秒自動同步 • 版本 v2.3 (API 實時聯動版) • APR 以 8 小時 / 1 小時費率復合計算
         </footer>
     </div>
 
@@ -605,7 +605,7 @@
                         <td class="p-4 text-right mono ${avgClass} opacity-80">${item.avg3d.toFixed(2)}%</td>
                         <td class="p-4 text-right mono text-gray-500 text-xs">${item.hourly.toFixed(4)}%</td>
                         <td class="p-4 text-center">
-                            <button onclick="openTradeModal('${item.symbol}')" class="bg-gray-800 hover:bg-yellow-500 hover:text-black text-yellow-500 text-[10px] px-3 py-1 rounded border border-yellow-500/30 font-bold transition-all">
+                            <button onclick="handleQuickTrade('${item.symbol}', this)" class="bg-gray-800 hover:bg-yellow-500 hover:text-black text-yellow-500 text-[10px] px-3 py-1 rounded border border-yellow-500/30 font-bold transition-all">
                                 🚀 下單
                             </button>
                         </td>
@@ -637,6 +637,33 @@
             document.getElementById('modal-symbol').innerText = symbol;
             document.getElementById('trade-modal').classList.remove('hidden');
             updateCommand();
+        }
+
+        async function handleQuickTrade(symbol, btn) {
+            const amount = prompt(`[${symbol}] 請輸入下單金額 (USDT):`, "500");
+            if (amount === null || amount === "") return;
+            
+            const originalText = btn.innerText;
+            btn.innerText = "⏳ 下單中...";
+            btn.disabled = true;
+
+            const cleanSymbol = symbol.split('(')[0].replace('USDT', '');
+            const apiUrl = `https://volt-judgment-tones-try.trycloudflare.com/hedge?token=***`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol: cleanSymbol, amount: parseFloat(amount) })
+                });
+                const result = await response.json();
+                alert(`下單結果:\n${JSON.stringify(result, null, 2)}`);
+            } catch (err) {
+                alert(`下單失敗: ${err.message}`);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
         }
 
         function closeModal() { document.getElementById('trade-modal').classList.add('hidden'); }
