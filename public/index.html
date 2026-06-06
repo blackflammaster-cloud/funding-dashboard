@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>資金費率監控看板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .apr-high { color: #ef4444; font-weight: bold; }
+        .apr-med { color: #f59e0b; font-weight: bold; }
+        .apr-low { color: #10b981; }
+        body { background-color: #0f172a; color: #f8fafc; }
+        .card { background-color: #1e293b; border: 1px solid #334155; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-400">📊 資金費率實時看板</h1>
+            <div id="last-update" class="text-slate-400 text-sm">更新中...</div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="card p-4 rounded-lg shadow-lg">
+                <div class="text-slate-400 text-sm">最高年化 (Hyna)</div>
+                <div id="hyna-top" class="text-2xl font-bold text-red-500">--%</div>
+            </div>
+            <div class="card p-4 rounded-lg shadow-lg">
+                <div class="text-slate-400 text-sm">監控幣種總數</div>
+                <div id="total-coins" class="text-2xl font-bold text-blue-400">--</div>
+            </div>
+            <div class="card p-4 rounded-lg shadow-lg">
+                <div class="text-slate-400 text-sm">掃描平台</div>
+                <div class="text-2xl font-bold text-green-400">5+ Dex/Cex</div>
+            </div>
+        </div>
+
+        <div class="card rounded-xl overflow-hidden shadow-2xl">
+            <table class="w-full text-left">
+                <thead class="bg-slate-800 text-slate-300">
+                    <tr>
+                        <th class="p-4">平台</th>
+                        <th class="p-4">幣種</th>
+                        <th class="p-4 text-right">預計年化 (APR)</th>
+                        <th class="p-4 text-right">時費率 (%)</th>
+                    </tr>
+                </thead>
+                <tbody id="funding-table" class="divide-y divide-slate-700">
+                    <!-- Data rows will be injected here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function fetchData() {
+            try {
+                const res = await fetch('/api/funding');
+                const data = await res.json();
+                
+                const table = document.getElementById('funding-table');
+                table.innerHTML = '';
+                
+                data.slice(0, 50).forEach(item => {
+                    const aprClass = item.apr > 100 ? 'apr-high' : (item.apr > 50 ? 'apr-med' : 'apr-low');
+                    const row = `
+                        <tr class="hover:bg-slate-700 transition-colors">
+                            <td class="p-4">
+                                <span class="px-2 py-1 rounded text-xs font-bold ${getPlatformColor(item.platform)}">
+                                    ${item.platform}
+                                </span>
+                            </td>
+                            <td class="p-4 font-mono font-bold">${item.symbol}</td>
+                            <td class="p-4 text-right font-mono ${aprClass}">${item.apr.toFixed(2)}%</td>
+                            <td class="p-4 text-right font-mono text-slate-400">${item.hourly.toFixed(4)}%</td>
+                        </tr>
+                    `;
+                    table.innerHTML += row;
+                });
+
+                document.getElementById('hyna-top').innerText = data.find(d => d.platform === 'Hyna')?.apr.toFixed(2) + '%' || '--%';
+                document.getElementById('total-coins').innerText = data.length;
+                document.getElementById('last-update').innerText = '最後更新: ' + new Date().toLocaleTimeString();
+
+            } catch (e) {
+                console.error('Fetch error:', e);
+            }
+        }
+
+        function getPlatformColor(p) {
+            switch(p) {
+                case 'Hyna': return 'bg-purple-900 text-purple-200';
+                case 'TradeXYZ': return 'bg-blue-900 text-blue-200';
+                case 'Binance': return 'bg-yellow-900 text-yellow-200';
+                case 'Bybit': return 'bg-orange-900 text-orange-200';
+                default: return 'bg-slate-700 text-slate-200';
+            }
+        }
+
+        fetchData();
+        setInterval(fetchData, 60000); // Auto refresh every minute
+    </script>
+</body>
+</html>
