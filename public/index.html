@@ -47,7 +47,7 @@
             <div class="flex items-center gap-3">
                 <div class="bg-yellow-500 text-black p-2 rounded-lg font-bold text-xl">K</div>
                 <div>
-                    <h1 class="text-xl font-bold">Funding Arbitrage <span class="text-yellow-500">PRO v1.5</span></h1>
+                    <h1 class="text-xl font-bold">Funding Arbitrage <span class="text-yellow-500">PRO v1.6</span></h1>
                     <div id="last-update" class="text-xs text-gray-500">正在掃描全球市場...</div>
                 </div>
             </div>
@@ -156,14 +156,14 @@
         </div>
 
         <footer class="mt-8 text-center text-gray-600 text-[10px]">
-            數據每 60 秒自動同步 • 版本 v1.5 (優化代理與歷史對接) • APR 以 8 小時 / 1 小時費率復合計算
+            數據每 60 秒自動同步 • 版本 v1.6 (穩定性徹底修復) • APR 以 8 小時 / 1 小時費率復合計算
         </footer>
     </div>
 
     <script>
         let fullData = [];
         let currentTradeSymbol = '';
-        const CACHE_KEY = 'funding_cache_v1.5'; 
+        const CACHE_KEY = 'funding_rate_cache_v16'; 
         
         function getHistoryCache() {
             try {
@@ -183,24 +183,56 @@
         }
 
         async function proxyFetch(url, useFallback = true) {
-            try {
-                // Primary: AllOrigins
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-                const res = await fetch(proxyUrl);
-                if (res.ok) return await res.json();
-                throw new Error('AllOrigins fail');
-            } catch (e) {
-                if (useFallback) {
-                    try {
-                        // Fallback: Use directly if possible (CORS-friendly APIs) or another proxy
-                        const res = await fetch(url);
-                        if (res.ok) return await res.json();
-                    } catch (e2) {
-                        console.error('Fetch failed for', url);
+            const proxies = [
+                `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                `https://thingproxy.freeboard.io/fetch/${url}`
+            ];
+
+            for (const proxy of proxies) {
+                try {
+                    console.log(`Trying proxy: ${proxy}`);
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+                    
+                    const res = await fetch(proxy, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    
+                    if (res.ok) {
+                        const text = await res.text();
+                        try {
+                            const data = JSON.parse(text);
+                            if (data) {
+                                console.log(`Proxy success: ${proxy}`);
+                                return data;
+                            }
+                        } catch (e) {
+                            console.warn(`Proxy ${proxy} returned non-JSON content`);
+                        }
+                    } else {
+                        console.warn(`Proxy returned status ${res.status}: ${proxy}`);
                     }
+                } catch (e) {
+                    console.warn(`Proxy failed or timed out: ${proxy}`, e.message);
                 }
-                return null;
             }
+
+            if (useFallback) {
+                try {
+                    const res = await fetch(url);
+                    if (res.ok) {
+                        const text = await res.text();
+                        try {
+                            return JSON.parse(text);
+                        } catch (e) {
+                            console.error('Direct fetch returned non-JSON content for', url);
+                        }
+                    }
+                } catch (e2) {
+                    console.error('All proxies and direct fetch failed for', url);
+                }
+            }
+            return null;
         }
 
         // --- Real History Fetcher (Optimized for performance) ---
@@ -414,46 +446,69 @@
 
         async function updateDashboard() {
             const lastUpdateEl = document.getElementById('last-update');
-            lastUpdateEl.classList.add('loading');
-
-            // Concurrent fetching for speed
-            const results = await Promise.allSettled([
-                fetchHL(''), fetchHL('xyz'), fetchHL('hyna'),
-                fetchBinance(), fetchBybit(), fetchAevo(),
-                fetchLighter(), fetchAster(), fetchVariational()
-            ]);
-
-            fullData = results
-                .filter(r => r.status === 'fulfilled')
-                .map(r => r.value)
-                .flat()
-                .sort((a, b) => Math.abs(b.apr) - Math.abs(a.apr));
+            const table = document.getElementById('funding-table');
             
-            renderTable();
-
-            // Background update for critical symbols (e.g. Aster ESPORTS)
-            const esports = fullData.find(d => d.symbol === 'ESPORTS' && d.platform === 'Aster');
-            if (esports) {
-                getTrueHistoryAvg('Aster', 'ESPORTS', esports.apr).then(realAvg => {
-                    esports.avg3d = realAvg;
-                    renderTable();
-                });
+            // 首次載入 Loading 狀態
+            if (fullData.length === 0) {
+                table.innerHTML = `<tr><td colspan="6" class="p-20 text-center"><div class="flex flex-col items-center gap-4"><div class="loading text-yellow-500 font-bold text-lg">正在獲取全球 9 大平台即時數據...</div><div class="text-xs text-gray-500">掃描 Binance, Bybit, Hyperliquid, Aster...</div></div></td></tr>`;
             }
+            
+            lastUpdateEl.classList.add('loading');
+            
+            console.log('Starting update...');
 
-            // Summary Stats
-            const topPos = [...fullData].filter(d => d.apr > 0).sort((a,b) => b.apr - a.apr)[0];
-            const topNeg = [...fullData].filter(d => d.apr < 0).sort((a,b) => a.apr - b.apr)[0];
-            const topAvg = [...fullData].sort((a,b) => Math.abs(b.avg3d) - Math.abs(a.avg3d))[0];
-            
-            document.getElementById('top-pos').innerText = topPos ? topPos.apr.toFixed(2) + '%' : '--%';
-            document.getElementById('top-pos-pair').innerText = topPos ? `${topPos.platform} · ${topPos.symbol}` : '--';
-            document.getElementById('top-neg').innerText = topNeg ? topNeg.apr.toFixed(2) + '%' : '--%';
-            document.getElementById('top-neg-pair').innerText = topNeg ? `${topNeg.platform} · ${topNeg.symbol}` : '--';
-            document.getElementById('top-avg').innerText = topAvg ? topAvg.avg3d.toFixed(2) + '%' : '--%';
-            document.getElementById('pair-count').innerText = fullData.length;
-            
-            lastUpdateEl.innerText = '最後同步於: ' + new Date().toLocaleTimeString();
-            lastUpdateEl.classList.remove('loading');
+            try {
+                // Concurrent fetching for speed
+                const results = await Promise.allSettled([
+                    fetchHL(''), fetchHL('xyz'), fetchHL('hyna'),
+                    fetchBinance(), fetchBybit(), fetchAevo(),
+                    fetchLighter(), fetchAster(), fetchVariational()
+                ]);
+
+                // 提取數據並嚴格按照 APR 由高到低排序
+                fullData = results
+                    .filter(r => r.status === 'fulfilled')
+                    .map(r => r.value)
+                    .flat()
+                    .filter(Boolean)
+                    .sort((a, b) => b.apr - a.apr);
+                
+                console.log('Data fetched:', fullData.length, 'items');
+                
+                if (fullData.length === 0) {
+                    table.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-gray-500 italic">⚠️ 數據抓取失敗，可能是代理伺服器過載，請稍後重整或檢查網路。</td></tr>`;
+                } else {
+                    renderTable();
+                }
+
+                // Background update for critical symbols (e.g. Aster ESPORTS)
+                const esports = fullData.find(d => d.symbol === 'ESPORTS' && d.platform === 'Aster');
+                if (esports) {
+                    getTrueHistoryAvg('Aster', 'ESPORTS', esports.apr).then(realAvg => {
+                        esports.avg3d = realAvg;
+                        renderTable();
+                    });
+                }
+
+                // Summary Stats
+                const topPos = [...fullData].filter(d => d.apr > 0).sort((a,b) => b.apr - a.apr)[0];
+                const topNeg = [...fullData].filter(d => d.apr < 0).sort((a,b) => a.apr - b.apr)[0];
+                const topAvg = [...fullData].sort((a,b) => Math.abs(b.avg3d) - Math.abs(a.avg3d))[0];
+                
+                document.getElementById('top-pos').innerText = topPos ? topPos.apr.toFixed(2) + '%' : '--%';
+                document.getElementById('top-pos-pair').innerText = topPos ? `${topPos.platform} · ${topPos.symbol}` : '--';
+                document.getElementById('top-neg').innerText = topNeg ? topNeg.apr.toFixed(2) + '%' : '--%';
+                document.getElementById('top-neg-pair').innerText = topNeg ? `${topNeg.platform} · ${topNeg.symbol}` : '--';
+                document.getElementById('top-avg').innerText = topAvg ? topAvg.avg3d.toFixed(2) + '%' : '--%';
+                document.getElementById('pair-count').innerText = fullData.length;
+                
+                lastUpdateEl.innerText = '最後同步於: ' + new Date().toLocaleTimeString();
+            } catch (err) {
+                console.error('Update failed:', err);
+                lastUpdateEl.innerText = '⚠️ 同步錯誤: ' + err.message;
+            } finally {
+                lastUpdateEl.classList.remove('loading');
+            }
         }
 
         function renderTable() {
