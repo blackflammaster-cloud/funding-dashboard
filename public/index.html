@@ -47,7 +47,7 @@
             <div class="flex items-center gap-3">
                 <div class="bg-yellow-500 text-black p-2 rounded-lg font-bold text-xl">K</div>
                 <div>
-                    <h1 class="text-xl font-bold">Funding Arbitrage <span class="text-yellow-500">PRO v1.6</span></h1>
+                    <h1 class="text-xl font-bold">Funding Arbitrage <span class="text-yellow-500">PRO v1.8</span></h1>
                     <div id="last-update" class="text-xs text-gray-500">正在掃描全球市場...</div>
                 </div>
             </div>
@@ -156,7 +156,7 @@
         </div>
 
         <footer class="mt-8 text-center text-gray-600 text-[10px]">
-            數據每 60 秒自動同步 • 版本 v1.6 (穩定性徹底修復) • APR 以 8 小時 / 1 小時費率復合計算
+            數據每 60 秒自動同步 • 版本 v1.8 (Top 100 歷史校準版) • APR 以 8 小時 / 1 小時費率復合計算
         </footer>
     </div>
 
@@ -235,37 +235,80 @@
             return null;
         }
 
-        // --- Real History Fetcher (Optimized for performance) ---
+        // --- Real History Fetcher (Upgraded for Top 100 + Priority Symbols) ---
+        async function updateTopHistory() {
+            // 1. 優先處理老闆最關心的 Aster ESPORT(S)
+            const priorityPairs = fullData.filter(d => 
+                (d.symbol.includes('ESPORT') && d.platform === 'Aster')
+            );
+            
+            // 2. 處理排名前 100 的交易對
+            const topPairs = fullData.slice(0, 100);
+            
+            // 合併並去重
+            const taskList = [...new Set([...priorityPairs, ...topPairs])];
+            
+            for (const item of taskList) {
+                const cache = getHistoryCache();
+                const cacheKey = `${item.platform}:${item.symbol}`;
+                if (cache[cacheKey]?.isReal && (Date.now() - cache[cacheKey].ts < 3600000)) {
+                    item.avg3d = cache[cacheKey].avg;
+                    continue;
+                }
+
+                getTrueHistoryAvg(item.platform, item.symbol, item.apr).then(realAvg => {
+                    if (realAvg !== item.apr) {
+                        item.avg3d = realAvg;
+                        fullData.sort((a, b) => b.avg3d - a.avg3d);
+                        renderTable();
+                    }
+                });
+                
+                await new Promise(r => setTimeout(r, 150));
+            }
+        }
+
         async function getTrueHistoryAvg(platform, symbol, currentApr) {
             const cache = getHistoryCache();
             const cacheKey = `${platform}:${symbol}`;
             const now = Date.now();
 
-            // 如果快取中有 4 小時內抓過的真實歷史，直接用 (減少請求負擔)
-            if (cache[cacheKey] && cache[cacheKey].isReal && (now - cache[cacheKey].ts < 14400000)) {
-                return cache[cacheKey].avg;
-            }
-
             try {
                 let historyRates = [];
+                let historyUrl = '';
+                
                 if (platform === 'Aster') {
-                    const data = await proxyFetch(`https://fapi.asterdex.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=18`);
-                    if (data && Array.isArray(data)) historyRates = data.map(i => parseFloat(i.fundingRate));
+                    historyUrl = `https://fapi.asterdex.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=18`;
                 } else if (platform === 'Binance') {
-                    const data = await proxyFetch(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=24`);
-                    if (data && Array.isArray(data)) historyRates = data.map(i => parseFloat(i.fundingRate));
+                    historyUrl = `https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=24`;
+                } else if (platform === 'Bybit') {
+                    historyUrl = `https://api.bybit.com/v5/market/funding/history?category=linear&symbol=${symbol}USDT&limit=24`;
+                }
+
+                if (historyUrl) {
+                    const data = await proxyFetch(historyUrl);
+                    if (data) {
+                        if (platform === 'Aster' && Array.isArray(data)) {
+                            historyRates = data.map(i => parseFloat(i.fundingRate));
+                        } else if (platform === 'Binance' && Array.isArray(data)) {
+                            historyRates = data.map(i => parseFloat(i.fundingRate));
+                        } else if (platform === 'Bybit' && data.result?.list) {
+                            historyRates = data.result.list.map(i => parseFloat(i.fundingRate));
+                        }
+                    }
                 }
 
                 if (historyRates.length > 0) {
                     const avgRate = historyRates.reduce((a, b) => a + b, 0) / historyRates.length;
-                    const interval = platform === 'Aster' ? (symbol.includes('ESPORT') ? 4 : 8) : 8;
+                    // 週期換算：Aster ESPORT 是 4h，其他預設 8h
+                    const interval = (platform === 'Aster' && symbol.includes('ESPORT')) ? 4 : 8;
                     const trueAvgApr = avgRate * (24 / interval) * 365 * 100;
                     
                     cache[cacheKey] = { avg: trueAvgApr, ts: now, isReal: true };
                     saveHistoryCache(cache);
                     return trueAvgApr;
                 }
-            } catch (e) { console.error('History fetch fail', e); }
+            } catch (e) { console.warn(`History fetch fail for ${platform}:${symbol}`); }
 
             return calculate3dAvg(currentApr, cacheKey);
         }
@@ -471,7 +514,7 @@
                     .map(r => r.value)
                     .flat()
                     .filter(Boolean)
-                    .sort((a, b) => b.apr - a.apr);
+                    .sort((a, b) => b.avg3d - a.avg3d); // 修正：依老闆要求改為 3 日平均排序
                 
                 console.log('Data fetched:', fullData.length, 'items');
                 
@@ -479,15 +522,8 @@
                     table.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-gray-500 italic">⚠️ 數據抓取失敗，可能是代理伺服器過載，請稍後重整或檢查網路。</td></tr>`;
                 } else {
                     renderTable();
-                }
-
-                // Background update for critical symbols (e.g. Aster ESPORTS)
-                const esports = fullData.find(d => d.symbol === 'ESPORTS' && d.platform === 'Aster');
-                if (esports) {
-                    getTrueHistoryAvg('Aster', 'ESPORTS', esports.apr).then(realAvg => {
-                        esports.avg3d = realAvg;
-                        renderTable();
-                    });
+                    // 非同步啟動 Top 50 歷史校準
+                    updateTopHistory();
                 }
 
                 // Summary Stats
