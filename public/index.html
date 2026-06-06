@@ -47,12 +47,16 @@
             <div class="flex items-center gap-3">
                 <div class="bg-yellow-500 text-black p-2 rounded-lg font-bold text-xl">K</div>
                 <div>
-                    <h1 class="text-xl font-bold">Funding Arbitrage <span class="text-yellow-500">PRO v1.8</span></h1>
+                    <h1 class="text-xl font-bold">Funding Arbitrage <span class="text-yellow-500">PRO v2.2</span></h1>
                     <div id="last-update" class="text-xs text-gray-500">正在掃描全球市場...</div>
                 </div>
             </div>
             
             <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
+                <div class="flex items-center gap-2 bg-gray-900 border border-gray-700 rounded-md px-3 py-2">
+                    <input type="checkbox" id="spot-only" class="w-4 h-4 accent-yellow-500 cursor-pointer">
+                    <label for="spot-only" class="text-xs text-gray-300 cursor-pointer select-none">僅顯示 MEXC 有現貨</label>
+                </div>
                 <div class="relative w-full md:w-80">
                     <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -75,9 +79,12 @@
                 <p id="top-pos-pair" class="text-[10px] text-gray-400 mt-1">--</p>
             </div>
             <div class="bg-[#181a20] p-4 rounded-lg border border-gray-800">
-                <p class="text-xs text-gray-500 mb-1">Max Long APR (負費率)</p>
-                <p id="top-neg" class="text-xl font-bold text-[#0ecb81]">--%</p>
-                <p id="top-neg-pair" class="text-[10px] text-gray-400 mt-1">--</p>
+                <p class="text-xs text-gray-500 mb-1">系統監控狀態</p>
+                <div class="flex items-center gap-2 mt-2">
+                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    <span class="text-sm font-bold text-green-400">1500% 熔斷已開啟</span>
+                </div>
+                <p class="text-[10px] text-gray-400 mt-1">依據記憶鐵律過濾異常</p>
             </div>
             <div class="bg-[#181a20] p-4 rounded-lg border border-gray-800">
                 <p class="text-xs text-gray-500 mb-1">3日平均最高</p>
@@ -156,14 +163,15 @@
         </div>
 
         <footer class="mt-8 text-center text-gray-600 text-[10px]">
-            數據每 60 秒自動同步 • 版本 v1.8 (Top 100 歷史校準版) • APR 以 8 小時 / 1 小時費率復合計算
+            數據每 60 秒自動同步 • 版本 v2.2 (現貨聯動版) • APR 以 8 小時 / 1 小時費率復合計算
         </footer>
     </div>
 
     <script>
+        const MEXC_SPOT_LIST = ["METAL","NEX","EDOM","PYTH","AO","NAT","BNT","NTX","DEVVE","SBETON","DAM","HTR","NOS","CARFI","DEFI","BAN","EFAON","PALMAI","WTA","NSG","MANEKI","HBAR","AR","SNT","ALKIMI","IXS","ROAM","SNPT","BTR","JDON","SUMR","MRKON","HANDY","PIPPIN","SN64","SIREN","TPRO","EDEL","UNION","PPC","MAIV","CHILLGUY","TSLAON","CODEX","BOSON","TATSU","ESTV","TLTON","HANDL","NFT","UTYA","IVVON","MTT","ALEO","TLOS","XTM","PURR","CREPE1","PIRATE","UNC","METAX","INSP","OPENX","SIX","TRIA","IQ","GRIFFAIN","NTRN","UCN","WALLET","Q","VISTA","RBC","NTMPI","TRUTH","FON","MUBI","XMR","L3","BAL","ASP","RSR","NS","MAPO","RAY","BIO","AIDOGE","SOL","IMGN","ASS","PALLON","NAP","NEET","KLIP","MOEW","QLINDO","EIGEN","MAGMA","LOT","GF","PENGUIN","XEN","PNIC","NOOK","IEFAON","NEMON","DOVU","ARIA","INJ","SATO","RVF","PXP","TRUSTSWAP","CLAWNCH","FNTIO","ION","FIO","HIFI","SATS","SOPH","PSQON","PORTUMA","VEREM","MELANIA","NAVX","PAWS","EUR","FLORK","RLC","UQC","ONDO","BDX","PEPE","SERV","DKA","INTUON","VSN","SABAI","CVNAON","UAI","STOOS","GACHA","GOAT","JNJON","PUMPCADE","XL1","KRU","GPS","MUON","WLFI","IO","OKM","FLUX","ASTEROID1","CRV","STABLE","EEMON","ELA","LOL","BICO","VSYS","TFI","ACS","AMZNX","CATI","TBC","ATR","VELO","LPT","VEE","MOG","PLUGON","NBISON","ROG","OHO","SN85","TAG","ORAI","MAT","BLUM","AVGOON","NOCK","FORT","EGO","GOATED","SEDA","PAAL","MON","ZKJ","HIMSON","SCRT","FOREST","IAUON","ELIZAOS","VICS","HAROLD","TRCR","DC","SN3","XX","BABYSHARK","SAL","LTT","SXT","APE","AUC","JUP","MITO","SOEX","NERO","ORCLON","SVSA","FAR","MERL","DEXTF","VADER","TROLLSOL","US","BLKON","DST","RICE","TROLL","XRB","LVVA","NUSD","SYS","ZOOM","ASTSON","MNTX","NOCON","LEE","COINON","NYM","AVAX","KITEAI","TJRM","XWGT","CELR","CEEK","ADX","龙虾","CLASH","ZK","SUI","ONI","UBERON","MAGA","NEXO","ADA","PUSS","CFG","ZTC","TIX","DOOD","SAPIEN","SNDKON","PHYCHAIN","B3","ACX","QORPO","FRAX","FDUSD","HIVE","SWARMS","EAI","REQ","NEIROCTO","ALBON","TAO","OMG","STX","ALE","ERG","PHNIX","MINX","SNSY","ETNON","MAV","ACM","COSTON","COFON","EUL","EPIC","STREAM","USDR","FNCT","MYX","MOVE","DOGS","AERO","LINON","BERA","SENT","POL","NODE","SEI","HANTA","DVO","TRIO","WHITE","NEXA","DEXE","MBG","AIC","SLX","TTN","WBTC","TONNY","WFCON","AL","WET","SN51","METIS","LINK","NVOON","BXX","TICS","SAHARA","CMC20","HEI","MANA","USD1","MEW","CULTDAO","AAPLX","BIT1","PEP","B","BAX","SCR","BOMB","NPC","MEMES","TX","XPM","ALGO","ZRC","IWNON","SOXXON","STRM","ANT","DPN","ETAN","PENDULUM","BILION","LONG","DEOD","NCN","TOSHI","LAYER","ONT","XIN","SWELL","CRO","PIN","BLZ","SDB","FLK","SWEAT","INX","AIW","RTF","ARCIEL","PUMPBTC","NAI","AVAIL","MIN","TRUMP","TRIPLET","IOTX","WOJAK","ART","MTC","RVN","ICECREAM","LAIKAL2","MGO","TRX","TRADE","ALI","TOKEN","SRC","HFT","BOS","DCR","CHZ","AT","VAI","ARMON","YB","RUJI","DHN","MARAON","SIS","KLACON","CYBER","TSLAX","CLO","ITAON","MAGIC","STEPN","PPLTON","ALVA","OL","NEXM","NODL","DBR","ORDER","UPC","ELP","BDC","PUBLIC","DEFX","SKY","PROSPER","MINA","MLN","SIN","ACU","OCTA","STORM","VRA","CPFC","RICH","DANGNN","BULLA","CATCOIN","WNT","SYN","RMV","CLAWBANK","MUMU","MASS","ALEX","CRTAI","HAI","CMGON","ESP","NIGHT","MONPRO","CHR","S","SUNRISE","GOOGLX","BKS","TEL","PAYAI","TRN","NVDAX","SHELL","FAKT","AIN","BUTTCOIN","CARV","GTAI","COOKIE","MTP","LB","MCDON","SER","USAT","SDEX","ISP","FACT","EDENA","BIDUON","ZENT","PONKE","EVA","BNC","IVPAY","PEAQ","USTC","MILLI","VRTXON","RESOLV","TKO","WNCG","CSIX","QBX","ZYN","PIG","SGT","KATA","IJHON","ABBVON","ENF","GGBR","FAVE","VPEPE","BLOCK","DRG","AMGNON","SANTOS","PROS","CAW","AWE","MORI","BP","RAVE","ICP","XEC","HEU","FORM","BERT","GLQ","XYO","SLP","XP8","VIM","EWT","SQD","ETHW","LKI","PORTAL","IXFI","TOWNS","PTB","SDR","NCT","DOGE","WOLFTON","SQGROW","KLV","WEN","CHEQ","FIRO","SCOTTY","PI","4EVER","YGG","ZIL","ESE","SHIDO","TLM","FITFI","MAVIA","AGLD","FAI","CHANGE","TRU1","SRX","UNP","BMNRON","IMU","BULL","APEX","SOGNI","AKITA","DRN","MYST","SMART","SKYA","ALU","REM","MODE","ATTON","B3TR","3KDS","ARPA","VVV","SMARS","STOP","VELODROME","CHIP","XU3O8","RPL","OPG","MIRA","ZKC","AIO","JYAI","KMNO","STRK","RAI","ASTR","NAORIS","AAPLON","D","A8","BASED","THREE","RXS","DOGEUS","UB","BCH","YFI","FLOCK","GOMINING","XRP","MEER","MRVLON","SENSO","ARX","FEG","WNXM","XNT","DORAFACTORY","TREAT","SYRUP","DOGINME","PUNCH","RGTION","ZSWAP","DLB","HOLDSTATION","LUNC","GENIUS","SHOPON","FLM","PEOPLE","A1X","ALEPH","HOSKY","BIOFI","GUA","TRWA","POR","CLANKER","RH","RXD","BLESS","EMR","VPR","ATLAS","GBCK","SGB","SAND","SQT","GIZA","BTX","XPR","AXPON","PSG","BEAMX","STAT","NFLXON","SUSHI","TREE","DOT","ACNON","XYM","SOSO","PIVX","OBOL","CAPTAINBNB","SMURFCAT","ADION","MOODENGETH","ABEY","ENA","TUT","MOMO","HMSTR","KITE","KSM","PHY","GVL","PTH","PEACE","BABAON","CRCLX","TXC","NOM","MASK","IMT","DEUS","SPA","FCXON","HNS","ID","RARE","SOON","HINT","SWFTC","KOM","維持現狀","ACH","PX","KUVI","ARRR","GXT","POD","OG","GNS","AUTONOMI","CCD","LMTS","XION","ZEN","QUBIC","GAIN","APT","GHUB","NXT","HELI","HANA","DODO","ATM","PORK","UNPON","UNGON","RION","LAVA","TFUEL","FORTH","RIZE","CORE","GRASS","M","CETUS","GEOD","NCDT","PRXVT","OWL","HELLO","WHITEWHALE","OPEN","XEMPIRE","PUNDIX","JAGER","KDX","MNT","ARW","COAI","TMUSON","TPTU","CWEB","COPON","SNAI","ARTY","PNG","IWFON","ZETA","DN","XPIN","PLTRON","NIZA","CARDS","CHEX","SHIRO","SAFE4","SKL","M87","GST","XEL","LUM","CUDIS","TCAPY","ANIME","SBUXON","BRN","FLQLON","BARD","THQ","LQR","CRWVON","HIPPO","OXYON","PEPU","JTO","ROLL","KAG","BABY","SN75","AMORE","TYCOON","AGT","PVT","CERE","COLS","AME","BANK","VANKEDISI","MORPHO","MBD","XTZ","XP","SPC","URAON","CRCLON","ELON","IRON","BXE","DYDX","CTR","BLAST","SPACE","NAVI","JAM","SPK","ERA","LKY","ISRGON","XNY","EVDC","BLUR","EDU","共建","GODS","BEL","RIOTON","EPIKO","BONE","HONEY","EMYC","AI","MDAO","ONE","ALPINE","ES","PBRON","RUNE","GITLAWB","XSWAP","AZUR","NIBI","GAMEVIRTUAL","PHB","REACT","GORK","SVL","CHMPZ","TOP","FIGON","FRT","ATLA","NEON","SPELL","HOT","NKN","VELVET","GOOGLON","CPH","EDGEN","SAROS","HEmi","BOBACAT","XCN","PHL","DSYNC","LISTA","THE","MXN","PEIPEI","RIVNON","RDDTON","GHST","BZZ","LOFI","AMP","ANON","XYZ","POLIS","FOLKS","REDO","ZRX","SPARKLET","MEEP","USDGO","ORDI","AVL","ROOT","KAITO","DOLO","GUI","USDF","CSPR","ALPH","HOODX","CSWAP","FB","MVRK","SIGMA","NOT","COPXON","XLAB","CULT","DMC","BBT","BROCCOLIF3B","FUSE","MCDX","UDAO","IN","WCO","DUPE","SCCP","STBU","ARB","LAT","GIGA","STETH","SVTS","MINIMA","AIXBT","NRG","ARG","LMAO","AALON","XLS","XVS","EURI","MAON","MIGGLES","HOOLI","MIH","PHA","FREEDOM","QUICK","SENS","BITBOARD","BUTTHOLE","ASTEROIDSOL","READY","EFFECT","AVA","ANETON","MLXC","GMX","VIVI","IOST","TWT","BAS","LINEA","SFI","RAD","CYBRO","PDDON","SGOVON","GOCHU","GLMR","LADYS","KERNEL","KOMA","BGSC","ITOTON","ECHO","SURPLUS","ARC","BNB","BANANAS31","WMON","ZRO","RIF","LFI","XAN","ETN","RNBW","BIRB","ARTX","MPC","MINDHIVE","GAME2","MNSRY","CARR","C98","BR","BTW","LITAS","WILD","ENPHON","AVAAI","ANI","T","SOUNON","NWS","BAON","HSK","XCX","DIN","FLR","BZR","EQIXON","SMCION","LOBSTAR","ANKR","ADO","MEME","GRAMPUS","BAT","LBC","SPACEX(PRE)","STORJ","SWGT","RISE","PYBOBO","GEVON","FHE","MMUI","ASTER","MMT","SFUND","SOLV","3ULL","NXPC","VARA","POPCAT","ENS","ME","BNKR","URANUS","XFI","CAMP","CHISAI","PYR","COINDEPO","CAS","TURBO","KELLYCLAUDE","ASR","SNEK","IKA","WBAI","SPGION","IDOL","OPT","哈基米","ELSA","MARS4","FRC","MPON","SPON","BMT","ZEREBRO","PLAI","QRL","NOBODY","EFC","APU","BCUT","PGPT","BST","CTK","ON","OVL","CTP","OFT","ACT","INTER","HOUSE","GOHOME","UNHON","KULA","JELLYJELLY","TSMON","TSUKA","ROBO","AMATON","CLONE","RBNT","UFD","MBOOM","VZON","GMEE","PSYOPANIME","SPCFIN","KEYCAT","XPL","MOCA","BULLS","ATOM","HTX","KFI","LA","XAI","KZEN","QAIT","RAIN","CC","KISHU","QCOMON","COCA","CEGON","PERP","MCOIN","BXN","TOWER","COLLECT","SLEEPLESSAI","TON","KTA","EDGE","VET","BEAT","TRC","COP","ADBEON","USAD","CBK","KAT","ZCX","REEF","KAIO","WUSD","SLF","MOODENG","DROPEE","ETC","GHX","GMMT","USDP","LIQUIDIUM","H","SOH","HUMA","DEP","VIRTUAL","WMTX","AZERO","QFI","VEX","STBL","CSCOON","GALA","WEMIX","BREV","TESTICLE","CPNGON","SPYX","BTCBAM","PEPE2","MOVA","RACA","WOD","MTV","FCT2","MNTC","PROPC","KEKIUS","MGT","PIEVERSE","ETH","CXT","ILV","GWC","WLD","JCT","RVV","STOS","ZEPH","PACT","SSV","RC","AMZNON","TRUF","TLF","ACHRON","FUNTOKEN","KGEN","AGI","RKC","FTT","AEVO","RHEA","HYPER","WAXL","GLDON","KIBSHI","XPX","EWJON","XLM","CAT","OLAS","ORCA","OORT","U","USDM","GROK","RDWON","MCN","LUFC","KRL","IUP","TTM","IDOS","BENQI","CORAL","CAP","SOLAXY","LETSBONK","AAVE","ATWO","UMXM","LBTC","IR","AST","MOLT","ABEL","CREPE","BOBO","CHEEMS","TUP","TIBBIR","C","BFT","COOK","ORTA","OP","U2U","AIX","SOLX","W","TADA","RABI","POLS","SOFION","ALTLAYER","LIT","CRWDON","SMT","TRAC","HEART","TAP","UPEG","SRDS","MLT","SOIL","VERT","KAS","DOGEGOV","ECOR","EURR","JPMON","CRTR","MCRT","CTC","PUNDIAI","BILL","OIL(USOON)","DUSK","DGMA","R2","ALICE","GCOIN","PUFFER","CVX","FARTCOIN","ASTEROID","PEPECOIN","BAR","PANTHER","AGGON","HARRY","TRVL","MANYU","AUKI","TNK","CAKE","CLAW","CTA","GWEI","PYPLON","1R0R","ALMANAK","SAGA","AEON","USUAL","AORA","VSTON","POND","CRAT","LAZIO","LUMI","BTY","我踏馬來了","NUTX","MAGATRUMP","TSG","ETHFI","JASMY","NXRA","NEAR","NOWON","WKC","POLYX","GRT","ANVL","SAUCE","USDUC","LNQ","IMO","CHO","RBT","OFC","DDMT","AREA","NEWT","GATA","JGGL","RWAINC","PROVE","PMG","WXT","USELESS","OMI","KILO","NC","FOG","FREEDOMOFMONEY","HPP","SPYON","MXSOL","VINE","XGZ","QQQON","OSMO","NETX","BRISE","FT","2Z","PANWON","HOPR","BINDER","FRTS","ABNBON","WAL","KAIA","DEGO","RON","NIL","P2P","PORTO","MENGO","MTRG","BEAM","CES","NFP","SLC","KAVA","OKLOON","MAS","ACN","STARHEROES","UMA","BTCMT","BONK","PORT3","MEMECOIN","QTUM","HUND","XELS","TBK","FLOW","LUNRON","MEMEFI","CLGO","RIZ","NKEON","BIGTIME","BSV","QUAI","1INCH","LL","MXNA","BDXN","AIA","AURASOL","GFI","RFRM","WAVES","PIT","PIXEL","幣安人生","DYM","XRPH","RTX","BLUE","GOBLIN","DJI6930","AIOT","SUT","BLUB","SHX","DEGEN","CPOOL","EVAA","ARK","TERRA","FF","AUR","BABYDOGE","GMEON","CON","ANYONE","ALCH","NAV","OXT","REGNON","MRSOON","TCOM","AGRO","TAIX","MLC","NMR","VERDRA","LCAP","ATH","RAIL","XR","PAL","PRCL","DCT","FWOG","XCHNG","PUSH","USDS","XRPC","CGPT","TRT","ARCSOL","USFRON","STEEM","CRYPGPT","HGG","NLS","XVG","ARS","SCARCITY","ZORA","ZBCN","VR","COMMON","REZ","CESS","ITHACA","CLS","SBTC","PRTG","FUN","MNFT","SNX","RWS","ADI","GODE","CHECK","USDC","BAY","COTI","GAIB","XDAG","MIU","ARTFI","SKYAI","ASSET","ZAMA","ECHELON","ZKP","NIM","SLIMEX","VFARM","UDS","CKUSDT","DUEL","TNSR","BB","EDGE1","KSKD","OMNOM","APEPE","PLB","GNO","FUSD","LEARN","BDCA","114514","HOPPY","CREO","MAMO","ZKWASM","SKI","OBT","KARRAT","SMX","SHIB","FIT","LOBO","ZBT","PROM","AWF","SERAPH","DOG","NUM","PLN","SOMI","AI3","COMP","ONG","HOME","STAY","SONIC","PNUT","ZETRIX","COHRON","TQQQON","REKTCOIN","DAO","LMWR","STG","RENDER","COLLAT","PEPON","TA","OZONE","SCCOON","FIDA","LIKE","STO","API3","XCH","ROUTE","XNA","VTRADING","SPACEMVC","CLOUD","VIC","OKB","RATS","FUTUON","DVERSE","REALTOKEN","ARI","GOLD(XAUT)","QNT","VENOM","DEB","BTSLR","MINDFAK","COW","CITY","ASM","MELION","BRL","EYWA","AFC","RIVER","AAST","HNT","BLUAI","KPC","HMND","POKT","AXS","INTCON","SPOTON","ATS","DAG","SHR","VRTON","ONDSON","TST","BROCCOLI","NMT","GAMESTOP","LIGHT","COCO","KASPY","COINX","RED","AB","INIT","PHT","BCCOIN","SD","RAGEGUY","UNIT0","TAKE","XEP","UP","AMDON","MOCHI","RNGR","TRUU","PENDLE","OGPU","EON","LIF3","JOC","KLK","MAN","BSA","OSHI","MEE","SPX","LQTY","BID","NVDAON","SAUBER","FARM","ZANO","AINETWORK","SNFT","XUSD","TRUST","SLVON","CRETA","ESPORTS","AVICI","LIME","FOXSY","ANDYETH","TARA","COS","TIPON","MEY","JUV","PLAY","STXON","FLUID","TITN","MAGAETH","GTC","MBL","FET","SPEC","GIGGLE","PENGU","LUNAM","YNE","POWER","PROPS","AVT","NATIX","IBMON","HAM","MOVR","WCT","OGY","XOXO","BADGER","RLS","DIONE","WIF","PROMPT","PMT","DADDY","LYN","MET","BOBA","AEROBUD","PRO","IMX","AIXPLAY","GAIA","SUPRA","LLYON","DTEC","XRD","SVN","MYRIA","NST","SFP","HGPT","OTK","FUEL","KCS","PRAI","GAG","PEPPER","RYO","TRCL","OVPP","AIXT","HOOK","WEETH","HASHAI","DEFACTOR","LRCXON","EWYON","NDC","ACA","XO","ARKM","PBX","EL","ACE","XMN","HLK","F","MAJOR","LAB","VES","PFEON","LLD","WAXP","VIRL","MEGA","SC","KNTQ","COMAI","VINU","SUKU","SAI","SIGN","XDB","MANTA","CORN","ZLW","VOW","EAT","WMTON","RSC","USDD","TMOON","BBAION","QBTSON","LOOP","ROSE","SFIN","RKLBON","DIAM","PIB","IRYS","BTS","JOE","FIL","SUNDOG","BULLISH","CRMON","CSIGMA","TAIKO","HIGH","MOONED","BKN","SYL","MUBARAK","GPU","CKB","PIGGY","UNI","ZCHF","BACON","OSAK","SNOWON","METAON","GXE","ESX","YURU","PAI","RSS3","BGB","GAME","ABBC","BOME","BCAT","METANIA","OGN","YACHT","SPCM","0G","HDN","DOP2","CYS","LINGO","X","A47","CHIRP","MYRO","MEZO","BTC","RTXON","ZIG","67","GUN","OPN","VTHO","VC","CA","ZEC","ASTRAAI","UBU","DNX","SEND","B2","INDAON","SUNCAT","WELF","ZEUS","ATT","OOB","SKR","AUCTION","TIA","USDE","MEA","OBI","VOLT","PRL","VANRY","VFY","DISON","TIVA","TRADOOR","WBT","QKC","OVR","SOLVEX","CATON","LYX","BLEND","PUMP","REAL","DIEM","HOODON","SUP","TAC","TXNON","XAVA","SNS","TAI","ABTON","DUCK","SAMO","AKE","EMBLEM","GME","CVXON","HP","PGON","GRM","ALLO","SWCH","RWA","A","FORU","HVLO","BSB","ELF","AZEN","G","MSTRON","XT","LUMIA","COQ","YOM","AZTEC","MAP","GSON","CTXC","PZP","RIO","RECALL","XTER","LDO","TPT","SHM","DINGO","TUSD","SKATE","VAMEON","QONE","VOOI","STAR","IONQON","QIE","HYDRA","OPTIMUS","NAKA","WOO","FLOKI","GOLD(PAXG)","LMTON","MSFTON","AMI","FARTBOY","WARD","WALLI","MATH","SYMM","MX","NUMI","CGN","AGRS","SHARE","BOB","DRIFT","GCB","KNC","ML","FOGO","BANANA","APTM","NEO","DEEP","NEXI","VANA","CFX","VERSEWORLD","GPAD","MWXT","BATTERY","NOMOX","CROSS","EGLD","FIGHT","LWOLF","CLORE","WIN","BOBER","XOMON","BTT","TIT","SCA","WQUIL","JETTON","LTC","VON","HOLO","MBX","BCE","PART","AIXDROP","UBOX","CELO","INI","WORLDCUP","LO0P","PARTI","COT","BRETTETH","SUN","HAEDAL","IOTA","AXM","MIRROR","IEMGON","TET","PITCH","RJV","XDC","MANTRA","BELUGA","XRPHAI","LRC","HYPE","IP","MBOX","BELLS","EDEN","ST","ZEST","SENTIS","ICNT","TURTLE","DMTR","AIPO","ENSO","PAXI","SAFE","PLUME","CNG","GEON","DASH","BABYBONK","AVNT","PACK","WDCON","OAS","OZO","SINGULARRY","NTH","4","TORN","ENJ","IWMON","SUPERFORM","AURORA","FLT","DEAI","KOON","LUNA","APR","BOTTO","GEMS","ASMLON","9BIT","WATT","TEA","ULTIMA","FLDT","SPLD"];
         let fullData = [];
         let currentTradeSymbol = '';
-        const CACHE_KEY = 'funding_rate_cache_v16'; 
+        const CACHE_KEY = 'funding_rate_cache_v21'; 
         
         function getHistoryCache() {
             try {
@@ -283,9 +291,28 @@
                     historyUrl = `https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=24`;
                 } else if (platform === 'Bybit') {
                     historyUrl = `https://api.bybit.com/v5/market/funding/history?category=linear&symbol=${symbol}USDT&limit=24`;
+                } else if (platform === 'Aevo') {
+                    // Aevo 需要後綴 -PERP
+                    const aevoSym = symbol.endsWith('-PERP') ? symbol : `${symbol}-PERP`;
+                    historyUrl = `https://api.aevo.xyz/funding-history?instrument_name=${aevoSym}&limit=24`;
+                } else if (['Hyperliquid', 'Hyna', 'TradeXYZ'].includes(platform)) {
+                    // HL 使用 POST，proxyFetch 需要支援
+                    const hlData = await fetch('https://api.hyperliquid.xyz/info', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            type: 'fundingHistory', 
+                            coin: symbol, 
+                            startTime: Date.now() - 3 * 24 * 3600 * 1000 
+                        })
+                    }).then(r => r.json()).catch(() => null);
+                    
+                    if (hlData && Array.isArray(hlData)) {
+                        historyRates = hlData.map(i => parseFloat(i.fundingRate));
+                    }
                 }
 
-                if (historyUrl) {
+                if (historyUrl && historyRates.length === 0) {
                     const data = await proxyFetch(historyUrl);
                     if (data) {
                         if (platform === 'Aster' && Array.isArray(data)) {
@@ -294,14 +321,19 @@
                             historyRates = data.map(i => parseFloat(i.fundingRate));
                         } else if (platform === 'Bybit' && data.result?.list) {
                             historyRates = data.result.list.map(i => parseFloat(i.fundingRate));
+                        } else if (platform === 'Aevo' && data.funding_history) {
+                            historyRates = data.funding_history.map(i => parseFloat(i[2]));
                         }
                     }
                 }
 
                 if (historyRates.length > 0) {
                     const avgRate = historyRates.reduce((a, b) => a + b, 0) / historyRates.length;
-                    // 週期換算：Aster ESPORT 是 4h，其他預設 8h
-                    const interval = (platform === 'Aster' && symbol.includes('ESPORT')) ? 4 : 8;
+                    // 週期換算：Aster ESPORT 是 4h，HL/Aevo 是 1h，其他預設 8h
+                    let interval = 8;
+                    if (platform === 'Aster' && symbol.includes('ESPORT')) interval = 4;
+                    if (['Hyperliquid', 'Hyna', 'TradeXYZ', 'Aevo'].includes(platform)) interval = 1;
+                    
                     const trueAvgApr = avgRate * (24 / interval) * 365 * 100;
                     
                     cache[cacheKey] = { avg: trueAvgApr, ts: now, isReal: true };
@@ -508,33 +540,31 @@
                     fetchLighter(), fetchAster(), fetchVariational()
                 ]);
 
-                // 提取數據並嚴格按照 APR 由高到低排序
+                // 提取數據並嚴格執行鐵律：1. 嚴禁負費率 2. 1500% 暴力熔斷
                 fullData = results
                     .filter(r => r.status === 'fulfilled')
                     .map(r => r.value)
                     .flat()
                     .filter(Boolean)
-                    .sort((a, b) => b.avg3d - a.avg3d); // 修正：依老闆要求改為 3 日平均排序
+                    .filter(d => d.apr > 0 && d.apr <= 1500) // 核心禁令：過濾負費率與 >1500% 的異常值
+                    .sort((a, b) => b.avg3d - a.avg3d);
                 
-                console.log('Data fetched:', fullData.length, 'items');
+                console.log('Data fetched (filtered by Iron Rules):', fullData.length, 'items');
                 
                 if (fullData.length === 0) {
-                    table.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-gray-500 italic">⚠️ 數據抓取失敗，可能是代理伺服器過載，請稍後重整或檢查網路。</td></tr>`;
+                    table.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-gray-500 italic">⚠️ 數據抓取失敗或全部觸發熔斷，請稍後重整。</td></tr>`;
                 } else {
                     renderTable();
-                    // 非同步啟動 Top 50 歷史校準
+                    // 非同步啟動 Top 100 歷史校準
                     updateTopHistory();
                 }
 
                 // Summary Stats
-                const topPos = [...fullData].filter(d => d.apr > 0).sort((a,b) => b.apr - a.apr)[0];
-                const topNeg = [...fullData].filter(d => d.apr < 0).sort((a,b) => a.apr - b.apr)[0];
-                const topAvg = [...fullData].sort((a,b) => Math.abs(b.avg3d) - Math.abs(a.avg3d))[0];
+                const topPos = [...fullData].sort((a,b) => b.apr - a.apr)[0];
+                const topAvg = [...fullData].sort((a,b) => b.avg3d - a.avg3d)[0];
                 
                 document.getElementById('top-pos').innerText = topPos ? topPos.apr.toFixed(2) + '%' : '--%';
                 document.getElementById('top-pos-pair').innerText = topPos ? `${topPos.platform} · ${topPos.symbol}` : '--';
-                document.getElementById('top-neg').innerText = topNeg ? topNeg.apr.toFixed(2) + '%' : '--%';
-                document.getElementById('top-neg-pair').innerText = topNeg ? `${topNeg.platform} · ${topNeg.symbol}` : '--';
                 document.getElementById('top-avg').innerText = topAvg ? topAvg.avg3d.toFixed(2) + '%' : '--%';
                 document.getElementById('pair-count').innerText = fullData.length;
                 
@@ -549,22 +579,28 @@
 
         function renderTable() {
             const searchTerm = document.getElementById('search').value.toUpperCase();
+            const spotOnly = document.getElementById('spot-only').checked;
             const table = document.getElementById('funding-table');
             const currentHTML = table.innerHTML;
             
-            const filtered = fullData.filter(d => 
-                d.symbol.toUpperCase().includes(searchTerm) || 
-                d.platform.toUpperCase().includes(searchTerm)
-            );
+            const filtered = fullData.filter(d => {
+                const matchesSearch = d.symbol.toUpperCase().includes(searchTerm) || 
+                                    d.platform.toUpperCase().includes(searchTerm);
+                const isSpot = MEXC_SPOT_LIST.includes(d.symbol.replace('USDT', ''));
+                return matchesSearch && (!spotOnly || isSpot);
+            });
             
             const newContent = filtered.slice(0, 100).map(item => {
                 const isPos = item.apr >= 0;
                 const aprClass = isPos ? 'apr-pos' : 'apr-neg';
                 const avgClass = item.avg3d >= 0 ? 'text-red-300' : 'text-green-300';
+                const hasSpot = MEXC_SPOT_LIST.includes(item.symbol.replace('USDT', ''));
+                const spotTag = hasSpot ? '<span class="ml-2 text-[8px] bg-green-500/20 text-green-400 border border-green-500/30 px-1 rounded">SPOT</span>' : '';
+
                 return `
                     <tr class="table-row transition-all border-b border-gray-800">
                         <td class="p-4"><span class="badge ${getPlatformColor(item.platform)}">${item.platform}</span></td>
-                        <td class="p-4 font-bold mono text-sm">${item.symbol}</td>
+                        <td class="p-4 font-bold mono text-sm flex items-center">${item.symbol}${spotTag}</td>
                         <td class="p-4 text-right mono ${aprClass}">${item.apr.toFixed(2)}%</td>
                         <td class="p-4 text-right mono ${avgClass} opacity-80">${item.avg3d.toFixed(2)}%</td>
                         <td class="p-4 text-right mono text-gray-500 text-xs">${item.hourly.toFixed(4)}%</td>
@@ -615,6 +651,7 @@
         }
 
         document.getElementById('search').addEventListener('input', renderTable);
+        document.getElementById('spot-only').addEventListener('change', renderTable);
         updateDashboard();
         setInterval(updateDashboard, 60000);
     </script>
