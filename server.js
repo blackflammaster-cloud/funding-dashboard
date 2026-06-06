@@ -5,7 +5,8 @@ const app = express();
 const port = 3005;
 
 app.use(cors());
-app.use(express.static('public'));
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'public')));
 
 const CONFIG = {
     HYPERLIQUID_API: 'https://api.hyperliquid.xyz/info',
