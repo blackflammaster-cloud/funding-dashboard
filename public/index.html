@@ -3,102 +3,529 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>資金費率監控看板</title>
+    <title>Kevin Funding Arbitrage Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
-        .apr-high { color: #ef4444; font-weight: bold; }
-        .apr-med { color: #f59e0b; font-weight: bold; }
-        .apr-low { color: #10b981; }
-        body { background-color: #0f172a; color: #f8fafc; }
-        .card { background-color: #1e293b; border: 1px solid #334155; }
+        :root {
+            --bg-main: #0b0e11;
+            --bg-card: #181a20;
+            --text-primary: #eaecef;
+            --text-secondary: #848e9c;
+            --accent-green: #0ecb81;
+            --accent-red: #f6465d;
+            --border-color: #2b3139;
+        }
+        body { 
+            background-color: var(--bg-main); 
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+        }
+        .apr-pos { color: var(--accent-red); font-weight: 600; }
+        .apr-neg { color: var(--accent-green); font-weight: 600; }
+        .mono { font-family: 'JetBrains+Mono', monospace; }
+        .table-row:hover { background-color: #2b3139; }
+        .badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(4px);
+        }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .loading { animation: pulse 1.5s infinite; }
     </style>
 </head>
-<body class="p-4 md:p-8">
-    <div class="max-w-6xl mx-auto">
-        <header class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold text-blue-400">📊 資金費率實時看板</h1>
-            <div id="last-update" class="text-slate-400 text-sm">更新中...</div>
+<body class="p-2 md:p-6">
+    <div class="max-w-[1400px] mx-auto">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 border-b border-gray-800 pb-4 gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-yellow-500 text-black p-2 rounded-lg font-bold text-xl">K</div>
+                <div>
+                    <h1 class="text-xl font-bold">Funding Arbitrage <span class="text-yellow-500">PRO v1.5</span></h1>
+                    <div id="last-update" class="text-xs text-gray-500">正在掃描全球市場...</div>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
+                <div class="relative w-full md:w-80">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </span>
+                    <input type="text" id="search" placeholder="搜尋幣種、平台..." 
+                           class="w-full bg-gray-900 border border-gray-700 rounded-md py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-yellow-500 transition-all">
+                </div>
+                <div id="status-summary" class="hidden md:flex gap-4 text-xs">
+                    <div class="text-center"><p class="text-gray-500">平台</p><p class="font-bold">9</p></div>
+                    <div class="text-center"><p class="text-gray-500">交易對</p><p id="pair-count" class="font-bold">--</p></div>
+                </div>
+            </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div class="card p-4 rounded-lg shadow-lg">
-                <div class="text-slate-400 text-sm">最高年化 (Hyna)</div>
-                <div id="hyna-top" class="text-2xl font-bold text-red-500">--%</div>
+        <!-- Top Alerts -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-[#181a20] p-4 rounded-lg border border-gray-800">
+                <p class="text-xs text-gray-500 mb-1">Max Short APR (正費率)</p>
+                <p id="top-pos" class="text-xl font-bold text-[#f6465d]">--%</p>
+                <p id="top-pos-pair" class="text-[10px] text-gray-400 mt-1">--</p>
             </div>
-            <div class="card p-4 rounded-lg shadow-lg">
-                <div class="text-slate-400 text-sm">監控幣種總數</div>
-                <div id="total-coins" class="text-2xl font-bold text-blue-400">--</div>
+            <div class="bg-[#181a20] p-4 rounded-lg border border-gray-800">
+                <p class="text-xs text-gray-500 mb-1">Max Long APR (負費率)</p>
+                <p id="top-neg" class="text-xl font-bold text-[#0ecb81]">--%</p>
+                <p id="top-neg-pair" class="text-[10px] text-gray-400 mt-1">--</p>
             </div>
-            <div class="card p-4 rounded-lg shadow-lg">
-                <div class="text-slate-400 text-sm">掃描平台</div>
-                <div class="text-2xl font-bold text-green-400">5+ Dex/Cex</div>
+            <div class="bg-[#181a20] p-4 rounded-lg border border-gray-800">
+                <p class="text-xs text-gray-500 mb-1">3日平均最高</p>
+                <p id="top-avg" class="text-xl font-bold text-yellow-500">--%</p>
+                <p class="text-[10px] text-gray-400 mt-1">歷史趨勢最強</p>
+            </div>
+            <div class="bg-[#181a20] p-4 rounded-lg border border-gray-800 flex items-center justify-center">
+                <div class="text-center">
+                    <button onclick="clearHistory()" class="group flex flex-col items-center">
+                        <p class="text-[10px] text-gray-500 group-hover:text-yellow-500 transition-colors">🔄 重置平均數據</p>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-xs font-bold text-blue-500 border border-blue-500/30 px-2 py-0.5 rounded group-hover:bg-blue-500 group-hover:text-white transition-all">RESET CACHE</span>
+                        </div>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div class="card rounded-xl overflow-hidden shadow-2xl">
-            <table class="w-full text-left">
-                <thead class="bg-slate-800 text-slate-300">
-                    <tr>
-                        <th class="p-4">平台</th>
-                        <th class="p-4">幣種</th>
-                        <th class="p-4 text-right">預計年化 (APR)</th>
-                        <th class="p-4 text-right">時費率 (%)</th>
-                    </tr>
-                </thead>
-                <tbody id="funding-table" class="divide-y divide-slate-700">
-                    <!-- Data rows will be injected here -->
-                </tbody>
-            </table>
+        <!-- Main Table -->
+        <div class="bg-[#181a20] rounded-lg border border-gray-800 overflow-hidden shadow-xl">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-[#2b3139] text-gray-400 text-xs uppercase tracking-wider">
+                            <th class="p-4 text-left font-semibold">交易所</th>
+                            <th class="p-4 text-left font-semibold">交易對</th>
+                            <th class="p-4 text-right font-semibold">即時 APR</th>
+                            <th class="p-4 text-right font-semibold">3日平均 APR</th>
+                            <th class="p-4 text-right font-semibold">即時費率 (%)</th>
+                            <th class="p-4 text-center font-semibold">快速操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="funding-table" class="divide-y divide-gray-800">
+                        <!-- Rows injected here -->
+                    </tbody>
+                </table>
+            </div>
         </div>
+        
+        <!-- Trade Modal -->
+        <div id="trade-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="bg-[#1e2329] w-full max-w-md rounded-xl border border-gray-700 shadow-2xl overflow-hidden">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-bold">🚀 對沖下單生成器</h3>
+                        <button onclick="closeModal()" class="text-gray-400 hover:text-white">&times;</button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-400">交易對</span>
+                            <span id="modal-symbol" class="font-bold text-yellow-500">--</span>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">投入金額 (USDT)</label>
+                            <input type="number" id="trade-amount" value="1000" oninput="updateCommand()"
+                                   class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:ring-1 focus:ring-yellow-500">
+                        </div>
+
+                        <div class="bg-black/30 p-3 rounded-lg border border-gray-800">
+                            <label class="block text-[10px] text-gray-500 mb-2 uppercase">請在終端機執行此指令</label>
+                            <div class="flex gap-2">
+                                <code id="cmd-output" class="flex-1 text-xs text-green-400 font-mono break-all bg-black/50 p-2 rounded">node hedge_executor.js ZEC 1000</code>
+                                <button onclick="copyCommand()" class="bg-yellow-500 text-black text-xs px-3 py-1 rounded font-bold hover:bg-yellow-400 transition-colors">複製</button>
+                            </div>
+                        </div>
+
+                        <div class="text-[10px] text-gray-500 leading-relaxed italic border-t border-gray-800 pt-4">
+                            💡 此腳本目前專為 <b>MEXC 買現貨 + Aster 做空</b> 優化。<br>
+                            執行前請確保 <b>~/.openclaw/workspace/hedge-tool/.env</b> 已配置密鑰。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-8 text-center text-gray-600 text-[10px]">
+            數據每 60 秒自動同步 • 版本 v1.5 (優化代理與歷史對接) • APR 以 8 小時 / 1 小時費率復合計算
+        </footer>
     </div>
 
     <script>
-        async function fetchData() {
+        let fullData = [];
+        let currentTradeSymbol = '';
+        const CACHE_KEY = 'funding_cache_v1.5'; 
+        
+        function getHistoryCache() {
             try {
-                const res = await fetch('/api/funding');
-                const data = await res.json();
-                
-                const table = document.getElementById('funding-table');
-                table.innerHTML = '';
-                
-                data.slice(0, 50).forEach(item => {
-                    const aprClass = item.apr > 100 ? 'apr-high' : (item.apr > 50 ? 'apr-med' : 'apr-low');
-                    const row = `
-                        <tr class="hover:bg-slate-700 transition-colors">
-                            <td class="p-4">
-                                <span class="px-2 py-1 rounded text-xs font-bold ${getPlatformColor(item.platform)}">
-                                    ${item.platform}
-                                </span>
-                            </td>
-                            <td class="p-4 font-mono font-bold">${item.symbol}</td>
-                            <td class="p-4 text-right font-mono ${aprClass}">${item.apr.toFixed(2)}%</td>
-                            <td class="p-4 text-right font-mono text-slate-400">${item.hourly.toFixed(4)}%</td>
-                        </tr>
-                    `;
-                    table.innerHTML += row;
-                });
+                return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+            } catch { return {}; }
+        }
 
-                document.getElementById('hyna-top').innerText = data.find(d => d.platform === 'Hyna')?.apr.toFixed(2) + '%' || '--%';
-                document.getElementById('total-coins').innerText = data.length;
-                document.getElementById('last-update').innerText = '最後更新: ' + new Date().toLocaleTimeString();
+        function saveHistoryCache(cache) {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+        }
 
+        function clearHistory() {
+            if(confirm('確定要清除所有歷史平均數據並重新校準嗎？')) {
+                localStorage.removeItem(CACHE_KEY);
+                location.reload();
+            }
+        }
+
+        async function proxyFetch(url, useFallback = true) {
+            try {
+                // Primary: AllOrigins
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+                const res = await fetch(proxyUrl);
+                if (res.ok) return await res.json();
+                throw new Error('AllOrigins fail');
             } catch (e) {
-                console.error('Fetch error:', e);
+                if (useFallback) {
+                    try {
+                        // Fallback: Use directly if possible (CORS-friendly APIs) or another proxy
+                        const res = await fetch(url);
+                        if (res.ok) return await res.json();
+                    } catch (e2) {
+                        console.error('Fetch failed for', url);
+                    }
+                }
+                return null;
+            }
+        }
+
+        // --- Real History Fetcher (Optimized for performance) ---
+        async function getTrueHistoryAvg(platform, symbol, currentApr) {
+            const cache = getHistoryCache();
+            const cacheKey = `${platform}:${symbol}`;
+            const now = Date.now();
+
+            // 如果快取中有 4 小時內抓過的真實歷史，直接用 (減少請求負擔)
+            if (cache[cacheKey] && cache[cacheKey].isReal && (now - cache[cacheKey].ts < 14400000)) {
+                return cache[cacheKey].avg;
+            }
+
+            try {
+                let historyRates = [];
+                if (platform === 'Aster') {
+                    const data = await proxyFetch(`https://fapi.asterdex.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=18`);
+                    if (data && Array.isArray(data)) historyRates = data.map(i => parseFloat(i.fundingRate));
+                } else if (platform === 'Binance') {
+                    const data = await proxyFetch(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=24`);
+                    if (data && Array.isArray(data)) historyRates = data.map(i => parseFloat(i.fundingRate));
+                }
+
+                if (historyRates.length > 0) {
+                    const avgRate = historyRates.reduce((a, b) => a + b, 0) / historyRates.length;
+                    const interval = platform === 'Aster' ? (symbol.includes('ESPORT') ? 4 : 8) : 8;
+                    const trueAvgApr = avgRate * (24 / interval) * 365 * 100;
+                    
+                    cache[cacheKey] = { avg: trueAvgApr, ts: now, isReal: true };
+                    saveHistoryCache(cache);
+                    return trueAvgApr;
+                }
+            } catch (e) { console.error('History fetch fail', e); }
+
+            return calculate3dAvg(currentApr, cacheKey);
+        }
+
+        function calculate3dAvg(currentApr, symbol) {
+            const cache = getHistoryCache();
+            const now = Date.now();
+            
+            if (!cache[symbol]) {
+                cache[symbol] = { avg: currentApr, ts: now };
+                saveHistoryCache(cache);
+            } else {
+                const timeDiff = now - cache[symbol].ts;
+                const diff = Math.abs(currentApr - cache[symbol].avg);
+                
+                if (timeDiff > 3600000 || diff > 200) {
+                    const weight = diff > 300 ? 0.8 : 0.3;
+                    cache[symbol].avg = (cache[symbol].avg * (1 - weight)) + (currentApr * weight);
+                    cache[symbol].ts = now;
+                    saveHistoryCache(cache);
+                }
+            }
+            return cache[symbol].avg;
+        }
+
+        // --- API Fetchers ---
+        async function fetchHL(dex) {
+            try {
+                const response = await fetch('https://api.hyperliquid.xyz/info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'metaAndAssetCtxs', dex: dex || undefined })
+                });
+                if (!response.ok) return [];
+                const [meta, contexts] = await response.json();
+                const platformName = dex === 'hyna' ? 'Hyna' : (dex === 'xyz' ? 'TradeXYZ' : 'Hyperliquid');
+                return meta.universe.map((asset, i) => {
+                    const ctx = contexts[i];
+                    if (ctx?.funding) {
+                        const funding = parseFloat(ctx.funding);
+                        const apr = funding * 24 * 365 * 100;
+                        return {
+                            platform: platformName,
+                            symbol: asset.name.replace(`${dex}:`, ''),
+                            apr: apr,
+                            avg3d: calculate3dAvg(apr, `${platformName}:${asset.name}`),
+                            hourly: funding * 100
+                        };
+                    }
+                    return null;
+                }).filter(Boolean);
+            } catch (e) { return []; }
+        }
+
+        async function fetchBinance() {
+            try {
+                // Binance often works better with direct fetch if CORS allows, otherwise use proxy
+                const data = await proxyFetch('https://fapi.binance.com/fapi/v1/premiumIndex');
+                if (!data || !Array.isArray(data)) return [];
+                return data.map(item => {
+                    const rate = parseFloat(item.lastFundingRate);
+                    const apr = rate * 3 * 365 * 100;
+                    const sym = item.symbol.replace('USDT', '');
+                    return {
+                        platform: 'Binance',
+                        symbol: sym,
+                        apr: apr,
+                        avg3d: calculate3dAvg(apr, `Binance:${sym}`),
+                        hourly: (rate * 100) / 8
+                    };
+                });
+            } catch (e) { return []; }
+        }
+
+        async function fetchBybit() {
+            try {
+                const data = await proxyFetch('https://api.bybit.com/v5/market/tickers?category=linear');
+                if (!data?.result?.list) return [];
+                return data.result.list.map(item => {
+                    const rate = parseFloat(item.fundingRate);
+                    const apr = rate * 3 * 365 * 100;
+                    const sym = item.symbol.replace('USDT', '');
+                    return {
+                        platform: 'Bybit',
+                        symbol: sym,
+                        apr: apr,
+                        avg3d: calculate3dAvg(apr, `Bybit:${sym}`),
+                        hourly: (rate * 100) / 8
+                    };
+                });
+            } catch (e) { return []; }
+        }
+
+        async function fetchAevo() {
+            try {
+                const data = await proxyFetch('https://api.aevo.xyz/markets?instrument_type=PERPETUAL');
+                if (!data) return [];
+                return data.map(item => {
+                    const rate = parseFloat(item.funding_rate);
+                    const apr = rate * 3 * 365 * 100;
+                    return {
+                        platform: 'Aevo',
+                        symbol: item.instrument_name,
+                        apr: apr,
+                        avg3d: calculate3dAvg(apr, `Aevo:${item.instrument_name}`),
+                        hourly: (rate * 100) / 8
+                    };
+                });
+            } catch (e) { return []; }
+        }
+
+        async function fetchLighter() {
+            try {
+                const data = await proxyFetch('https://mainnet.zklighter.elliot.ai/api/v1/funding-rates');
+                if (!data?.funding_rates) return [];
+                return data.funding_rates.map(item => {
+                    const rate = parseFloat(item.rate);
+                    const apr = rate * 3 * 365 * 100;
+                    return {
+                        platform: 'Lighter',
+                        symbol: item.symbol,
+                        apr: apr,
+                        avg3d: calculate3dAvg(apr, `Lighter:${item.symbol}:${item.exchange}`),
+                        hourly: (rate * 100) / 8
+                    };
+                });
+            } catch (e) { return []; }
+        }
+
+        async function fetchAster() {
+            try {
+                const [infoRes, premiumRes] = await Promise.all([
+                    proxyFetch('https://fapi.asterdex.com/fapi/v3/fundingInfo'),
+                    proxyFetch('https://fapi.asterdex.com/fapi/v1/premiumIndex')
+                ]);
+                if (!premiumRes) return [];
+                const intervalMap = {};
+                if (infoRes) infoRes.forEach(i => { intervalMap[i.symbol] = i.fundingIntervalHours || 8; });
+                
+                // Use regular map for instant display, don't await true history inside here to avoid blocking
+                return premiumRes.map(item => {
+                    const rate = parseFloat(item.lastFundingRate || 0);
+                    const interval = intervalMap[item.symbol] || 8;
+                    const apr = rate * (24 / interval) * 365 * 100;
+                    const sym = item.symbol.replace('USDT', '');
+                    
+                    // Simple avg for now, top results will be updated later
+                    return {
+                        platform: 'Aster',
+                        symbol: sym,
+                        apr: apr,
+                        avg3d: calculate3dAvg(apr, `Aster:${sym}`),
+                        hourly: (rate * 100) / interval
+                    };
+                });
+            } catch (e) { return []; }
+        }
+
+        async function fetchVariational() {
+            try {
+                const data = await proxyFetch('https://omni-client-api.prod.ap-northeast-1.variational.io/metadata/stats');
+                if (!data?.listings) return [];
+                return data.listings.map(item => {
+                    const rate = parseFloat(item.funding_rate);
+                    const interval = item.funding_interval_s || 28800;
+                    const apr = rate * (86400 / interval) * 365 * 100;
+                    if (Math.abs(apr) > 5000) return null;
+                    return {
+                        platform: 'Variation',
+                        symbol: item.ticker,
+                        apr: apr,
+                        avg3d: calculate3dAvg(apr, `Variation:${item.ticker}`),
+                        hourly: (rate * 100) / (interval / 3600)
+                    };
+                }).filter(Boolean);
+            } catch (e) { return []; }
+        }
+
+        async function updateDashboard() {
+            const lastUpdateEl = document.getElementById('last-update');
+            lastUpdateEl.classList.add('loading');
+
+            // Concurrent fetching for speed
+            const results = await Promise.allSettled([
+                fetchHL(''), fetchHL('xyz'), fetchHL('hyna'),
+                fetchBinance(), fetchBybit(), fetchAevo(),
+                fetchLighter(), fetchAster(), fetchVariational()
+            ]);
+
+            fullData = results
+                .filter(r => r.status === 'fulfilled')
+                .map(r => r.value)
+                .flat()
+                .sort((a, b) => Math.abs(b.apr) - Math.abs(a.apr));
+            
+            renderTable();
+
+            // Background update for critical symbols (e.g. Aster ESPORTS)
+            const esports = fullData.find(d => d.symbol === 'ESPORTS' && d.platform === 'Aster');
+            if (esports) {
+                getTrueHistoryAvg('Aster', 'ESPORTS', esports.apr).then(realAvg => {
+                    esports.avg3d = realAvg;
+                    renderTable();
+                });
+            }
+
+            // Summary Stats
+            const topPos = [...fullData].filter(d => d.apr > 0).sort((a,b) => b.apr - a.apr)[0];
+            const topNeg = [...fullData].filter(d => d.apr < 0).sort((a,b) => a.apr - b.apr)[0];
+            const topAvg = [...fullData].sort((a,b) => Math.abs(b.avg3d) - Math.abs(a.avg3d))[0];
+            
+            document.getElementById('top-pos').innerText = topPos ? topPos.apr.toFixed(2) + '%' : '--%';
+            document.getElementById('top-pos-pair').innerText = topPos ? `${topPos.platform} · ${topPos.symbol}` : '--';
+            document.getElementById('top-neg').innerText = topNeg ? topNeg.apr.toFixed(2) + '%' : '--%';
+            document.getElementById('top-neg-pair').innerText = topNeg ? `${topNeg.platform} · ${topNeg.symbol}` : '--';
+            document.getElementById('top-avg').innerText = topAvg ? topAvg.avg3d.toFixed(2) + '%' : '--%';
+            document.getElementById('pair-count').innerText = fullData.length;
+            
+            lastUpdateEl.innerText = '最後同步於: ' + new Date().toLocaleTimeString();
+            lastUpdateEl.classList.remove('loading');
+        }
+
+        function renderTable() {
+            const searchTerm = document.getElementById('search').value.toUpperCase();
+            const table = document.getElementById('funding-table');
+            const currentHTML = table.innerHTML;
+            
+            const filtered = fullData.filter(d => 
+                d.symbol.toUpperCase().includes(searchTerm) || 
+                d.platform.toUpperCase().includes(searchTerm)
+            );
+            
+            const newContent = filtered.slice(0, 100).map(item => {
+                const isPos = item.apr >= 0;
+                const aprClass = isPos ? 'apr-pos' : 'apr-neg';
+                const avgClass = item.avg3d >= 0 ? 'text-red-300' : 'text-green-300';
+                return `
+                    <tr class="table-row transition-all border-b border-gray-800">
+                        <td class="p-4"><span class="badge ${getPlatformColor(item.platform)}">${item.platform}</span></td>
+                        <td class="p-4 font-bold mono text-sm">${item.symbol}</td>
+                        <td class="p-4 text-right mono ${aprClass}">${item.apr.toFixed(2)}%</td>
+                        <td class="p-4 text-right mono ${avgClass} opacity-80">${item.avg3d.toFixed(2)}%</td>
+                        <td class="p-4 text-right mono text-gray-500 text-xs">${item.hourly.toFixed(4)}%</td>
+                        <td class="p-4 text-center">
+                            <button onclick="openTradeModal('${item.symbol}')" class="bg-gray-800 hover:bg-yellow-500 hover:text-black text-yellow-500 text-[10px] px-3 py-1 rounded border border-yellow-500/30 font-bold transition-all">
+                                🚀 下單
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            if (currentHTML !== newContent) {
+                table.innerHTML = newContent;
             }
         }
 
         function getPlatformColor(p) {
             switch(p) {
-                case 'Hyna': return 'bg-purple-900 text-purple-200';
-                case 'TradeXYZ': return 'bg-blue-900 text-blue-200';
-                case 'Binance': return 'bg-yellow-900 text-yellow-200';
-                case 'Bybit': return 'bg-orange-900 text-orange-200';
-                default: return 'bg-slate-700 text-slate-200';
+                case 'Hyna': return 'bg-purple-900 text-purple-200 border border-purple-700';
+                case 'TradeXYZ': return 'bg-blue-900 text-blue-200 border border-blue-700';
+                case 'Binance': return 'bg-yellow-600 text-black';
+                case 'Bybit': return 'bg-orange-500 text-black';
+                case 'Aevo': return 'bg-pink-600 text-white';
+                case 'Lighter': return 'bg-cyan-600 text-black';
+                case 'Aster': return 'bg-indigo-600 text-white';
+                case 'Variation': return 'bg-emerald-600 text-black';
+                default: return 'bg-gray-700 text-gray-200';
             }
         }
 
-        fetchData();
-        setInterval(fetchData, 60000); // Auto refresh every minute
+        function openTradeModal(symbol) {
+            currentTradeSymbol = symbol;
+            document.getElementById('modal-symbol').innerText = symbol;
+            document.getElementById('trade-modal').classList.remove('hidden');
+            updateCommand();
+        }
+
+        function closeModal() { document.getElementById('trade-modal').classList.add('hidden'); }
+        function updateCommand() {
+            const amount = document.getElementById('trade-amount').value || 0;
+            const cleanSymbol = currentTradeSymbol.split('(')[0].replace('USDT', '');
+            document.getElementById('cmd-output').innerText = `node hedge_executor.js ${cleanSymbol} ${amount}`;
+        }
+        function copyCommand() {
+            navigator.clipboard.writeText(document.getElementById('cmd-output').innerText);
+            alert('指令已複製！請貼上至終端機執行。');
+        }
+
+        document.getElementById('search').addEventListener('input', renderTable);
+        updateDashboard();
+        setInterval(updateDashboard, 60000);
     </script>
 </body>
 </html>
