@@ -47,12 +47,15 @@
             <div class="flex items-center gap-3">
                 <div class="bg-yellow-500 text-black p-2 rounded-lg font-bold text-xl">K</div>
                 <div>
-                    <h1 class="text-xl font-bold">Funding Arbitrage <span class="text-yellow-500">PRO v2.4</span></h1>
+                    <h1 class="text-xl font-bold">Funding Arbitrage <span class="text-yellow-500">PRO v2.5</span></h1>
                     <div id="last-update" class="text-xs text-gray-500">正在掃描全球市場... (API 實時聯動版)</div>
                 </div>
             </div>
             
             <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
+                <button onclick="openPositionModal()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 rounded-md px-3 py-2 text-xs font-bold transition-all shadow-lg shadow-blue-600/20">
+                    <span>📊</span> 倉位資訊
+                </button>
                 <div class="flex items-center gap-2 bg-gray-900 border border-gray-700 rounded-md px-3 py-2">
                     <input type="checkbox" id="spot-only" class="w-4 h-4 accent-yellow-500 cursor-pointer">
                     <label for="spot-only" class="text-xs text-gray-300 cursor-pointer select-none">僅顯示 MEXC 有現貨</label>
@@ -123,6 +126,35 @@
                 </table>
             </div>
         </div>
+
+        <!-- Positions Modal -->
+        <div id="positions-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+            <div class="bg-[#1e2329] w-full max-w-5xl max-h-[90vh] rounded-xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col">
+                <div class="p-6 border-b border-gray-800 flex justify-between items-center">
+                    <h3 class="text-xl font-bold flex items-center gap-3">
+                        <span class="text-blue-500">📊</span> 實時倉位與資費監控
+                        <span id="pos-refresh-timer" class="text-[10px] font-normal text-gray-500 bg-gray-800 px-2 py-1 rounded ml-4 uppercase tracking-widest">10s 自動刷新</span>
+                    </h3>
+                    <div class="flex items-center gap-4">
+                        <div id="account-balances" class="flex gap-4 text-xs">
+                            <!-- Balances injected here -->
+                        </div>
+                        <button onclick="closePositionModal()" class="text-gray-400 hover:text-white text-2xl ml-4">&times;</button>
+                    </div>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto p-6">
+                    <div id="positions-content" class="space-y-6">
+                        <!-- Positions Table injected here -->
+                    </div>
+                </div>
+                
+                <div class="p-4 bg-black/20 border-t border-gray-800 text-[10px] text-gray-500 flex justify-between">
+                    <span>數據由 CCXT & Aster API 聯動獲取</span>
+                    <span id="pos-last-update">--</span>
+                </div>
+            </div>
+        </div>
         
         <!-- Trade Modal -->
         <div id="trade-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
@@ -177,7 +209,37 @@
 
                         <div id="modal-error" class="hidden text-[10px] text-red-400 bg-red-400/10 p-2 rounded border border-red-400/20"></div>
 
-                        <div class="flex gap-3 pt-2">
+                        <!-- 成交回報面板 -->
+                        <div id="summary-panel" class="hidden bg-gray-900/50 rounded-xl border border-yellow-500/30 overflow-hidden">
+                            <div class="bg-yellow-500/10 px-4 py-2 border-b border-yellow-500/20 flex justify-between items-center">
+                                <span class="text-[10px] font-bold text-yellow-500 uppercase tracking-widest">成交回報面板</span>
+                                <span id="summary-time" class="text-[9px] text-gray-500"></span>
+                            </div>
+                            <div class="p-4 space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="bg-black/30 p-2 rounded-lg">
+                                        <p class="text-[9px] text-gray-500 uppercase">初始基差虧損</p>
+                                        <p id="summary-spread-loss" class="text-sm font-bold text-red-400">--</p>
+                                    </div>
+                                    <div class="bg-black/30 p-2 rounded-lg">
+                                        <p class="text-[9px] text-gray-500 uppercase">當前資費 (年化)</p>
+                                        <p id="summary-funding" class="text-sm font-bold text-green-400">--</p>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <p class="text-[9px] text-gray-500 uppercase mb-2">成交細節 (Trades)</p>
+                                    <div id="summary-trades" class="space-y-1"></div>
+                                </div>
+
+                                <div>
+                                    <p class="text-[9px] text-gray-500 uppercase mb-2">持倉狀態 (Positions)</p>
+                                    <div id="summary-positions" class="space-y-1"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="modal-actions" class="flex gap-3 pt-2">
                             <button onclick="closeModal()" class="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold transition-all">取消</button>
                             <button id="confirm-trade-btn" onclick="executeHedgeTrade()" class="flex-[2] bg-yellow-500 hover:bg-yellow-400 text-black py-3 rounded-lg font-bold shadow-lg shadow-yellow-500/20 transition-all flex items-center justify-center gap-2">
                                 <span id="btn-spinner" class="hidden w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
@@ -190,7 +252,7 @@
         </div>
 
         <footer class="mt-8 text-center text-gray-600 text-[10px]">
-            數據每 60 秒自動同步 • 版本 v2.4 (專業交易面板版) • APR 以 8 小時 / 1 小時費率復合計算
+            數據每 60 秒自動同步 • 版本 v2.5 (平台精確對位版) • APR 以 8 小時 / 1 小時費率復合計算
         </footer>
     </div>
 
@@ -632,7 +694,7 @@
                         <td class="p-4 text-right mono ${avgClass} opacity-80">${item.avg3d.toFixed(2)}%</td>
                         <td class="p-4 text-right mono text-gray-500 text-xs">${item.hourly.toFixed(4)}%</td>
                         <td class="p-4 text-center">
-                            <button onclick="handleQuickTrade('${item.symbol}', this)" class="bg-gray-800 hover:bg-yellow-500 hover:text-black text-yellow-500 text-[10px] px-3 py-1 rounded border border-yellow-500/30 font-bold transition-all">
+                            <button onclick="handleQuickTrade('${item.symbol}', '${item.platform}', this)" class="bg-gray-800 hover:bg-yellow-500 hover:text-black text-yellow-500 text-[10px] px-3 py-1 rounded border border-yellow-500/30 font-bold transition-all">
                                 🚀 下單
                             </button>
                         </td>
@@ -660,6 +722,97 @@
         }
 
         let pricePollInterval = null;
+        let positionPollInterval = null;
+
+        async function openPositionModal() {
+            document.getElementById('positions-modal').classList.remove('hidden');
+            refreshPositions();
+            if (positionPollInterval) clearInterval(positionPollInterval);
+            positionPollInterval = setInterval(refreshPositions, 10000);
+        }
+
+        function closePositionModal() {
+            document.getElementById('positions-modal').classList.add('hidden');
+            if (positionPollInterval) {
+                clearInterval(positionPollInterval);
+                positionPollInterval = null;
+            }
+        }
+
+        async function refreshPositions() {
+            const content = document.getElementById('positions-content');
+            const balanceEl = document.getElementById('account-balances');
+            const lastUpdateEl = document.getElementById('pos-last-update');
+            
+            try {
+                const res = await fetch('https://volt-judgment-tones-try.trycloudflare.com/positions?token=kevin_hedge_9988');
+                const data = await res.json();
+                
+                if (data.error) throw new Error(data.error);
+
+                // Render Balances
+                balanceEl.innerHTML = `
+                    <div class="text-right"><p class="text-gray-500 uppercase">MEXC</p><p class="font-bold text-yellow-500">${data.balances.mexc.toFixed(2)} U</p></div>
+                    <div class="text-right"><p class="text-gray-500 uppercase">Binance</p><p class="font-bold text-yellow-500">${data.balances.binance.toFixed(2)} U</p></div>
+                `;
+
+                // Render Positions Table
+                let html = `
+                    <table class="w-full text-sm text-left">
+                        <thead>
+                            <tr class="text-gray-500 text-[10px] uppercase border-b border-gray-800">
+                                <th class="pb-2">幣種</th>
+                                <th class="pb-2">現貨持倉 (MEXC)</th>
+                                <th class="pb-2">合約持倉 (ASTER/BN)</th>
+                                <th class="pb-2 text-right">實時資費 / APR</th>
+                                <th class="pb-2 text-right">即時基差 (Spread)</th>
+                                <th class="pb-2 text-right">未實現盈虧</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800/50">
+                `;
+
+                data.positions.forEach(p => {
+                    const spreadColor = p.spreadPercent >= 0 ? 'text-green-400' : 'text-red-400';
+                    const pnlColor = p.future.unrealizedPnl >= 0 ? 'text-green-400' : 'text-red-400';
+                    
+                    html += `
+                        <tr class="table-row">
+                            <td class="py-4 font-bold text-lg mono">${p.symbol}</td>
+                            <td class="py-4">
+                                <div class="font-bold mono text-gray-200">${p.spot.amount.toFixed(4)}</div>
+                                <div class="text-[10px] text-gray-500">$${p.spot.price.toFixed(4)} (≈$${p.spot.value.toFixed(2)})</div>
+                            </td>
+                            <td class="py-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="badge ${getPlatformColor(p.future.platform)}">${p.future.platform}</span>
+                                    <span class="font-bold mono ${p.future.amount < 0 ? 'text-red-400' : 'text-green-400'}">${p.future.amount.toFixed(4)}</span>
+                                </div>
+                                <div class="text-[10px] text-gray-500">Entry: $${p.future.entryPrice.toFixed(4)} | Mark: $${p.future.currentPrice.toFixed(4)}</div>
+                            </td>
+                            <td class="py-4 text-right">
+                                <div class="font-bold mono text-green-400">${(p.funding.rate * 100).toFixed(4)}%</div>
+                                <div class="text-[10px] text-gray-500 font-bold">APR: ${p.funding.apr.toFixed(2)}%</div>
+                            </td>
+                            <td class="py-4 text-right">
+                                <div class="font-bold mono ${spreadColor}">${(p.spreadPercent).toFixed(4)}%</div>
+                                <div class="text-[10px] text-gray-500">$${p.spread.toFixed(4)}</div>
+                            </td>
+                            <td class="py-4 text-right">
+                                <div class="font-bold mono ${pnlColor}">$${p.future.unrealizedPnl.toFixed(2)}</div>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody></table>`;
+                content.innerHTML = html;
+                lastUpdateEl.innerText = '最後更新: ' + new Date().toLocaleTimeString();
+
+            } catch (err) {
+                content.innerHTML = `<div class="p-10 text-center text-red-400">獲取倉位失敗: ${err.message}</div>`;
+            }
+        }
 
         async function openTradeModal(symbol, platform) {
             currentTradeSymbol = symbol;
@@ -695,6 +848,9 @@
                 if (platform === 'Aster') {
                     const asterData = await proxyFetch(`https://fapi.asterdex.com/fapi/v1/ticker/price?symbol=${symbol}USDT`);
                     if (asterData?.price) futurePrice = parseFloat(asterData.price);
+                } else if (platform === 'Binance') {
+                    const binanceData = await proxyFetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}USDT`);
+                    if (binanceData?.price) futurePrice = parseFloat(binanceData.price);
                 } else if (platform === 'Lighter') {
                     const lighterData = await proxyFetch(`https://mainnet.zklighter.elliot.ai/api/v1/orderbook?symbol=${symbol}`);
                     if (lighterData?.asks?.[0]?.[0]) futurePrice = parseFloat(lighterData.asks[0][0]);
@@ -731,7 +887,7 @@
             spinner.classList.remove('hidden');
             errorEl.classList.add('hidden');
 
-            const apiUrl = `https://volt-judgment-tones-try.trycloudflare.com/hedge?token=***`;
+            const apiUrl = `https://volt-judgment-tones-try.trycloudflare.com/hedge?token=kevin_hedge_9988`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -745,11 +901,16 @@
                 });
                 const result = await response.json();
                 
-                if (response.ok) {
-                    alert(`✅ 下單成功！\n${JSON.stringify(result, null, 2)}`);
-                    closeModal();
+                if (response.ok && result.ok) {
+                    // 顯示成交回報面板
+                    if (result.summary) {
+                        displaySummary(result.summary);
+                    } else {
+                        alert(`✅ 下單成功！\n${result.output}`);
+                        closeModal();
+                    }
                 } else {
-                    throw new Error(result.error || result.message || "未知伺服器錯誤");
+                    throw new Error(result.error || result.message || "下單失敗，請檢查伺服器日誌");
                 }
             } catch (err) {
                 errorEl.innerText = `下單失敗: ${err.message}`;
@@ -760,19 +921,40 @@
             }
         }
 
+        function displaySummary(s) {
+            document.getElementById('summary-panel').classList.remove('hidden');
+            document.getElementById('modal-actions').classList.add('hidden');
+            document.getElementById('summary-time').innerText = new Date(s.timestamp).toLocaleTimeString();
+            
+            document.getElementById('summary-spread-loss').innerText = s.spreadLoss ? `-$${Math.abs(s.spreadLoss).toFixed(4)}` : '--';
+            document.getElementById('summary-funding').innerText = s.funding ? `${(s.funding.rate*100).toFixed(4)}% (${s.funding.apr.toFixed(2)}%)` : '--';
+            
+            const tradesHtml = s.trades.map(t => `
+                <div class="flex justify-between text-[10px] bg-white/5 p-1 px-2 rounded">
+                    <span class="text-gray-400">${t.platform} ${t.side}</span>
+                    <span class="mono">${t.price} / ${t.amount} <span class="text-gray-500">(Fee: ${t.fee?.cost || 0})</span></span>
+                </div>
+            `).join('');
+            document.getElementById('summary-trades').innerHTML = tradesHtml;
+
+            const posHtml = s.positions.map(p => `
+                <div class="flex justify-between text-[10px] bg-white/5 p-1 px-2 rounded">
+                    <span class="text-gray-400">${p.platform} ${p.symbol}</span>
+                    <span class="mono">${p.amount} <span class="text-gray-500">${p.entryPrice ? '@'+p.entryPrice : ''}</span></span>
+                </div>
+            `).join('');
+            document.getElementById('summary-positions').innerHTML = posHtml;
+        }
+
         function closeModal() { 
             document.getElementById('trade-modal').classList.add('hidden'); 
+            document.getElementById('summary-panel').classList.add('hidden');
+            document.getElementById('modal-actions').classList.remove('hidden');
             if (pricePollInterval) clearInterval(pricePollInterval);
         }
 
-        async function handleQuickTrade(symbol, btn) {
-            // Find item platform in fullData
-            const item = fullData.find(d => d.symbol === symbol);
-            if (item) {
-                openTradeModal(symbol, item.platform);
-            } else {
-                openTradeModal(symbol, 'Aster');
-            }
+        async function handleQuickTrade(symbol, platform, btn) {
+            openTradeModal(symbol, platform);
         }
 
         document.getElementById('search').addEventListener('input', renderTable);
