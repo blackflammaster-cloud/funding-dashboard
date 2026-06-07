@@ -13,15 +13,43 @@ const CONFIG = {
     BINANCE_API: 'https://fapi.binance.com/fapi/v1/premiumIndex',
     BYBIT_API: 'https://api.bybit.com/v5/market/tickers?category=linear',
     ASTER_API: 'https://fapi.asterdex.com/fapi/v1/premiumIndex',
+    ASTER_INFO_API: 'https://fapi.asterdex.com/fapi/v1/fundingInfo',
 };
 
-function getIntervalHours(nextFundingTimeMs) {
+// 緩存 Aster 的 interval 資訊
+let asterIntervalCache = {};
+let lastAsterInfoFetch = 0;
+
+async function getAsterIntervals() {
+    try {
+        if (Date.now() - lastAsterInfoFetch > 3600000) { // 1小時更新一次即可
+            const res = await axios.get(CONFIG.ASTER_INFO_API, { timeout: 10000 });
+            const map = {};
+            res.data.forEach(i => { map[i.symbol] = i.fundingIntervalHours || 8; });
+            asterIntervalCache = map;
+            lastAsterInfoFetch = Date.now();
+        }
+    } catch (e) { console.error("Error fetching Aster funding info:", e.message); }
+    return asterIntervalCache;
+}
+
+function getIntervalHours(nextFundingTimeMs, symbol, platform, intervalMap = {}) {
+    // 優先使用精確映射表
+    if (platform === 'Aster' && intervalMap[symbol]) return intervalMap[symbol];
+    
+    // Hyperliquid 永遠是 1 小時
+    if (platform === 'Hyperliquid' || platform === 'Hyna' || platform === 'TradeXYZ') return 1;
+
     if (!nextFundingTimeMs || nextFundingTimeMs == 0) return 8;
     const now = Date.now();
     const next = parseInt(nextFundingTimeMs);
-    // 從「距下次結算的時間」反推 interval
-    const diffHours = (next - now) / 3600000;
-    // 下次結算一定在 0~interval 小時內，取最接近的標準值
+    let diffHours = (next - now) / 3600000;
+    
+    if (diffHours < 0) {
+        if (diffHours < -1) return 8; 
+        return 8; 
+    }
+
     if (diffHours <= 1.1) return 1;
     if (diffHours <= 2.1) return 2;
     if (diffHours <= 4.1) return 4;
@@ -30,17 +58,21 @@ function getIntervalHours(nextFundingTimeMs) {
 
 async function getFundingData() {
     const data = [];
+    const asterIntervals = await getAsterIntervals();
+    const timeoutOpt = { timeout: 10000 }; // 10s timeout to prevent hanging
     
     try {
         // 1. Hyperliquid (Main, XYZ, Hyna)
         const hlDechs = ['', 'xyz', 'hyna'];
         for (const dex of hlDechs) {
             try {
-                const res = await axios.post(CONFIG.HYPERLIQUID_API, { type: 'metaAndAssetCtxs', dex: dex || undefined });
+                const res = await axios.post(CONFIG.HYPERLIQUID_API, { type: 'metaAndAssetCtxs', dex: dex || undefined }, timeoutOpt);
                 const platformName = dex === 'hyna' ? 'Hyna' : (dex === 'xyz' ? 'TradeXYZ' : 'Hyperliquid');
                 res.data[0].universe.forEach((asset, i) => {
                     const ctx = res.data[1][i];
                     if (ctx?.funding) {
+                        const intervalHours = 1; // HL is always 1h interval
+                        // HL APR calculation fix: (rate * (24/1) * 365 * 100)
                         const apr = parseFloat(ctx.funding) * 24 * 365 * 100;
                         if (apr > 0) {
                             data.push({
@@ -57,9 +89,9 @@ async function getFundingData() {
 
         // 2. Binance
         try {
-            const res = await axios.get(CONFIG.BINANCE_API);
+            const res = await axios.get(CONFIG.BINANCE_API, timeoutOpt);
             res.data.forEach(item => {
-                const intervalHours = getIntervalHours(item.nextFundingTime);
+                const intervalHours = getIntervalHours(item.nextFundingTime, item.symbol, 'Binance');
                 const apr = parseFloat(item.lastFundingRate) * (24 / intervalHours) * 365 * 100;
                 if (apr > 0) {
                     data.push({
@@ -74,9 +106,9 @@ async function getFundingData() {
 
         // 3. Bybit
         try {
-            const res = await axios.get(CONFIG.BYBIT_API);
+            const res = await axios.get(CONFIG.BYBIT_API, timeoutOpt);
             res.data.result.list.forEach(item => {
-                const intervalHours = getIntervalHours(item.nextFundingTime);
+                const intervalHours = getIntervalHours(item.nextFundingTime, item.symbol, 'Bybit');
                 const apr = parseFloat(item.fundingRate) * (24 / intervalHours) * 365 * 100;
                 if (apr > 0) {
                     data.push({
@@ -91,9 +123,9 @@ async function getFundingData() {
 
         // 4. Aster
         try {
-            const res = await axios.get(CONFIG.ASTER_API);
+            const res = await axios.get(CONFIG.ASTER_API, timeoutOpt);
             res.data.forEach(item => {
-                const intervalHours = getIntervalHours(item.nextFundingTime);
+                const intervalHours = getIntervalHours(item.nextFundingTime, item.symbol, 'Aster', asterIntervals);
                 const apr = parseFloat(item.lastFundingRate) * (24 / intervalHours) * 365 * 100;
                 if (apr > 0) {
                     data.push({
@@ -113,8 +145,17 @@ async function getFundingData() {
     return data.sort((a, b) => b.apr - a.apr);
 }
 
+let fundingDataCache = null;
+let lastFundingFetch = 0;
+const CACHE_TTL = 30000; // 30 seconds
+
 app.get('/api/funding', async (req, res) => {
+    if (fundingDataCache && Date.now() - lastFundingFetch < CACHE_TTL) {
+        return res.json(fundingDataCache);
+    }
     const data = await getFundingData();
+    fundingDataCache = data;
+    lastFundingFetch = Date.now();
     res.json(data);
 });
 

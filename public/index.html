@@ -326,6 +326,9 @@
         const asterIntervalMap = {}; 
 
         // --- v2.18 Security Logic (SessionStorage) ---
+        const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const safeToFixed = (val, dec = 2) => (typeof val === 'number' && !isNaN(val)) ? val.toFixed(dec) : '--';
+
         function getManagerKey() {
             return sessionStorage.getItem('kevin_manager_key') || '';
         }
@@ -796,9 +799,9 @@
                 const topPos = [...fullData].sort((a,b) => b.apr - a.apr)[0];
                 const topAvg = [...fullData].sort((a,b) => b.avg3d - a.avg3d)[0];
                 
-                document.getElementById('top-pos').innerText = topPos ? topPos.apr.toFixed(2) + '%' : '--%';
-                document.getElementById('top-pos-pair').innerText = topPos ? `${topPos.platform} · ${topPos.symbol}` : '--';
-                document.getElementById('top-avg').innerText = topAvg ? topAvg.avg3d.toFixed(2) + '%' : '--%';
+                document.getElementById('top-pos').innerText = topPos ? safeToFixed(topPos.apr, 2) + '%' : '--%';
+                document.getElementById('top-pos-pair').innerText = topPos ? `${escapeHtml(topPos.platform)} · ${escapeHtml(topPos.symbol)}` : '--';
+                document.getElementById('top-avg').innerText = topAvg ? safeToFixed(topAvg.avg3d, 2) + '%' : '--%';
                 document.getElementById('pair-count').innerText = fullData.length;
                 
                 lastUpdateEl.innerText = '最後同步於: ' + new Date().toLocaleTimeString();
@@ -831,21 +834,21 @@
                 // v2.20 Spread UI
                 const spreadVal = item.spread || 0;
                 const spreadClass = spreadVal >= 0 ? 'text-green-400' : 'text-red-400';
-                const spreadText = spreadVal === 0 ? '--' : `${spreadVal > 0 ? '+' : ''}${spreadVal.toFixed(2)}%`;
+                const spreadText = spreadVal === 0 ? '--' : `${spreadVal > 0 ? '+' : ''}${safeToFixed(spreadVal, 2)}%`;
 
                 const hasSpot = MEXC_SPOT_LIST.includes(item.symbol.replace('USDT', ''));
                 const spotTag = hasSpot ? '<span class="ml-2 text-[8px] bg-green-500/20 text-green-400 border border-green-500/30 px-1 rounded">SPOT</span>' : '';
 
                 return `
                     <tr class="table-row transition-all border-b border-gray-800">
-                        <td class="p-4"><span class="badge ${getPlatformColor(item.platform)}">${item.platform}</span></td>
-                        <td class="p-4 font-bold mono text-sm flex items-center">${item.symbol}${spotTag}</td>
-                        <td class="p-4 text-right mono ${aprClass}">${item.apr.toFixed(2)}%</td>
-                        <td class="p-4 text-right mono ${avgClass} opacity-80">${item.avg3d.toFixed(2)}%</td>
+                        <td class="p-4"><span class="badge ${getPlatformColor(item.platform)}">${escapeHtml(item.platform)}</span></td>
+                        <td class="p-4 font-bold mono text-sm flex items-center">${escapeHtml(item.symbol)}${spotTag}</td>
+                        <td class="p-4 text-right mono ${aprClass}">${safeToFixed(item.apr, 2)}%</td>
+                        <td class="p-4 text-right mono ${avgClass} opacity-80">${safeToFixed(item.avg3d, 2)}%</td>
                         <td class="p-4 text-right mono ${spreadClass} font-bold">${spreadText}</td>
-                        <td class="p-4 text-right mono text-gray-500 text-xs">${item.hourly.toFixed(4)}%</td>
+                        <td class="p-4 text-right mono text-gray-500 text-xs">${safeToFixed(item.hourly, 4)}%</td>
                         <td class="p-4 text-center">
-                            <button onclick="handleQuickTrade('${item.symbol}', '${item.platform}', this)" class="bg-gray-800 hover:bg-yellow-500 hover:text-black text-yellow-500 text-[10px] px-3 py-1 rounded border border-yellow-500/30 font-bold transition-all">
+                            <button onclick="handleQuickTrade('${escapeHtml(item.symbol)}', '${escapeHtml(item.platform)}', this)" class="bg-gray-800 hover:bg-yellow-500 hover:text-black text-yellow-500 text-[10px] px-3 py-1 rounded border border-yellow-500/30 font-bold transition-all">
                                 🚀 下單
                             </button>
                         </td>
@@ -946,48 +949,48 @@
                     html += `
                         <tr class="table-row">
                             <td class="py-4">
-                                <div class="font-bold text-lg mono">${p.symbol}</div>
-                                <div class="text-[10px] font-bold text-green-400 mono">${(p.funding.rate * 100).toFixed(4)}%</div>
-                                <div class="text-[9px] text-gray-500 uppercase">APR: ${p.funding.apr.toFixed(2)}%</div>
+                                <div class="font-bold text-lg mono">${escapeHtml(p.symbol)}</div>
+                                <div class="text-[10px] font-bold text-green-400 mono">${safeToFixed(p.funding.rate * 100, 4)}%</div>
+                                <div class="text-[9px] text-gray-500 uppercase">APR: ${safeToFixed(p.funding.apr, 2)}%</div>
                             </td>
                             <td class="py-4">
                                 <div class="flex flex-col gap-2">
                                     <div>
                                         <div class="flex items-center gap-1">
-                                            <span class="badge ${getPlatformColor(p.spot.platform)} font-mono">${p.spot.platform}</span>
-                                            <span class="mono text-gray-200 font-bold">${p.spot.amount.toFixed(2)}</span>
+                                            <span class="badge ${getPlatformColor(p.spot.platform)} font-mono">${escapeHtml(p.spot.platform)}</span>
+                                            <span class="mono text-gray-200 font-bold">${safeToFixed(p.spot.amount, 2)}</span>
                                         </div>
                                         <div class="text-[10px] text-gray-500 mt-0.5">
-                                            $${p.spot.price.toFixed(4)} | Value: $${p.spot.value.toFixed(2)} <span class="text-[9px] opacity-60 ml-1">(Cost: $${p.spot.avgCost.toFixed(4)})</span>
+                                            $${safeToFixed(p.spot.price, 4)} | Value: $${safeToFixed(p.spot.value, 2)} <span class="text-[9px] opacity-60 ml-1">(Cost: $${safeToFixed(p.spot.avgCost, 4)})</span>
                                         </div>
-                                        <div class="text-[9px] ${spotPnlColor}">PNL: $${p.spot.unrealizedPnl.toFixed(2)}</div>
+                                        <div class="text-[9px] ${spotPnlColor}">PNL: $${safeToFixed(p.spot.unrealizedPnl, 2)}</div>
                                     </div>
                                     <div>
                                         <div class="flex items-center gap-1">
-                                            <span class="badge ${getPlatformColor(p.future.platform)} font-mono">${p.future.platform}</span>
-                                            <span class="mono ${p.future.amount < 0 ? 'text-red-400' : 'text-green-400'} font-bold">${p.future.amount.toFixed(2)}</span>
+                                            <span class="badge ${getPlatformColor(p.future.platform)} font-mono">${escapeHtml(p.future.platform)}</span>
+                                            <span class="mono ${p.future.amount < 0 ? 'text-red-400' : 'text-green-400'} font-bold">${safeToFixed(p.future.amount, 2)}</span>
                                         </div>
                                         <div class="text-[10px] text-gray-500 mt-0.5">
-                                            $${p.future.currentPrice.toFixed(4)} | Value: $${p.future.value.toFixed(2)} <span class="text-[9px] opacity-60 ml-1">(Entry: $${p.future.entryPrice.toFixed(4)})</span>
+                                            $${safeToFixed(p.future.currentPrice, 4)} | Value: $${safeToFixed(p.future.value, 2)} <span class="text-[9px] opacity-60 ml-1">(Entry: $${safeToFixed(p.future.entryPrice, 4)})</span>
                                         </div>
                                         <div class="flex items-center gap-2 mt-1">
-                                            <div class="text-[9px] ${futurePnlColor}">PNL: $${p.future.unrealizedPnl.toFixed(2)}</div>
-                                            <div class="text-[9px] text-orange-500 font-bold bg-orange-500/10 px-1 rounded">LIQ: $${p.future.liquidationPrice > 0 ? p.future.liquidationPrice.toFixed(4) : '--'}</div>
+                                            <div class="text-[9px] ${futurePnlColor}">PNL: $${safeToFixed(p.future.unrealizedPnl, 2)}</div>
+                                            <div class="text-[9px] text-orange-500 font-bold bg-orange-500/10 px-1 rounded">LIQ: $${p.future.liquidationPrice > 0 ? safeToFixed(p.future.liquidationPrice, 4) : '--'}</div>
                                         </div>
                                     </div>
                                 </div>
                             </td>
                             <td class="py-4 text-right mono text-green-400 font-bold">
-                                $${p.fundingEarned.toFixed(2)}
+                                $${safeToFixed(p.fundingEarned, 2)}
                             </td>
                             <td class="py-4 text-right mono text-gray-400">
-                                $${p.totalFees.toFixed(2)}
+                                $${safeToFixed(p.totalFees, 2)}
                             </td>
                             <td class="py-4 text-right mono ${posPnlColor}">
-                                $${p.positionPnl.toFixed(2)}
+                                $${safeToFixed(p.positionPnl, 2)}
                             </td>
                             <td class="py-4 text-right">
-                                <div class="font-bold mono ${totalPnlColor} text-lg">$${p.totalPnl.toFixed(2)}</div>
+                                <div class="font-bold mono ${totalPnlColor} text-lg">$${safeToFixed(p.totalPnl, 2)}</div>
                                 <div class="text-[9px] text-gray-500 uppercase">Financial PNL</div>
                             </td>
                         </tr>
@@ -1089,13 +1092,13 @@
                     if (t?.last_trade_price) futurePrice = parseFloat(t.last_trade_price);
                 }
 
-                if (spotPrice) document.getElementById('modal-spot-price').innerText = spotPrice.toFixed(6);
-                if (futurePrice) document.getElementById('modal-future-price').innerText = futurePrice.toFixed(6);
+                if (spotPrice) document.getElementById('modal-spot-price').innerText = safeToFixed(spotPrice, 6);
+                if (futurePrice) document.getElementById('modal-future-price').innerText = safeToFixed(futurePrice, 6);
 
                 if (spotPrice && futurePrice) {
                     const spread = ((futurePrice - spotPrice) / spotPrice) * 100;
                     const spreadEl = document.getElementById('modal-spread');
-                    spreadEl.innerText = (spread > 0 ? '+' : '') + spread.toFixed(4) + '%';
+                    spreadEl.innerText = (spread > 0 ? '+' : '') + safeToFixed(spread, 4) + '%';
                     spreadEl.className = `mono font-bold text-sm ${spread >= 0 ? 'text-green-400' : 'text-red-400'}`;
 
                     // v2.23: 全自動雙端保護 (±40%)
@@ -1104,8 +1107,8 @@
                         const tpEl = document.getElementById('trade-tp');
                         // 僅在用戶尚未輸入時自動填寫
                         if (slEl.value === '' && tpEl.value === '') {
-                            slEl.value = (futurePrice * 1.4).toFixed(6); // 合約止損 / 現貨止盈
-                            tpEl.value = (futurePrice * 0.6).toFixed(6); // 合約止盈 / 雲端止損
+                            slEl.value = safeToFixed(futurePrice * 1.4, 6); // 合約止損 / 現貨止盈
+                            tpEl.value = safeToFixed(futurePrice * 0.6, 6); // 合約止盈 / 雲端止損
                             hasAutoFilled = true;
                             console.log(`[v2.23] 已自動部署保護位: +40% SL($${slEl.value}), -40% TP($${tpEl.value})`);
                         }
@@ -1118,12 +1121,12 @@
                     const amount = parseFloat(document.getElementById('trade-amount').value || 0);
                     const required = amount / 5; // 假設 5x
                     
-                    document.getElementById('modal-margin-value').innerText = `$${available.toFixed(2)}`;
-                    document.getElementById('modal-margin-required').innerText = `$${required.toFixed(2)} USDT`;
+                    document.getElementById('modal-margin-value').innerText = `$${safeToFixed(available, 2)}`;
+                    document.getElementById('modal-margin-required').innerText = `$${safeToFixed(required, 2)} USDT`;
                     
                     if (available < required) {
                         document.getElementById('modal-margin-value').className = "text-sm font-bold text-red-400";
-                        errorEl.innerText = `⚠️ 保證金不足！當前 $${available.toFixed(2)} < 需求 $${required.toFixed(2)}。下單按鈕已暫時禁用。`;
+                        errorEl.innerText = `⚠️ 保證金不足！當前 $${safeToFixed(available, 2)} < 需求 $${safeToFixed(required, 2)}。下單按鈕已暫時禁用。`;
                         errorEl.classList.remove('hidden');
                         btn.disabled = true;
                         btn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -1206,8 +1209,8 @@
             document.getElementById('modal-actions').classList.add('hidden');
             document.getElementById('summary-time').innerText = new Date(s.timestamp).toLocaleTimeString();
             
-            document.getElementById('summary-spread-loss').innerText = s.spreadLoss ? `-$${Math.abs(s.spreadLoss).toFixed(4)}` : '--';
-            document.getElementById('summary-funding').innerText = s.funding ? `${(s.funding.rate*100).toFixed(4)}% (${s.funding.apr.toFixed(2)}%)` : '--';
+            document.getElementById('summary-spread-loss').innerText = s.spreadLoss ? `-$${safeToFixed(Math.abs(s.spreadLoss), 4)}` : '--';
+            document.getElementById('summary-funding').innerText = s.funding ? `${safeToFixed(s.funding.rate*100, 4)}% (${safeToFixed(s.funding.apr, 2)}%)` : '--';
             
             // v2.25 Protection Summary
             const protectionEl = document.createElement('div');
