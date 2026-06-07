@@ -47,12 +47,15 @@
             <div class="flex items-center gap-3">
                 <div class="bg-yellow-500 text-black p-2 rounded-lg font-bold text-xl">K</div>
                 <div>
-                    <h1 class="text-xl font-bold">Funding Arbitrage <span class="text-yellow-500">PRO v2.9</span></h1>
+                    <h1 class="text-xl font-bold">Funding Arbitrage <span class="text-yellow-500">PRO v2.25</span></h1>
                     <div id="last-update" class="text-xs text-gray-500">正在掃描全球市場... (API 實時聯動版)</div>
                 </div>
             </div>
             
             <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
+                <button onclick="lockSystem()" class="flex items-center gap-2 bg-red-900/30 hover:bg-red-800/50 text-red-400 border border-red-500/30 rounded-md px-3 py-2 text-xs font-bold transition-all">
+                    <span>🔒</span> 安全鎖
+                </button>
                 <button onclick="openPositionModal()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/30 rounded-md px-3 py-2 text-xs font-bold transition-all shadow-lg shadow-blue-600/20">
                     <span>📊</span> 倉位資訊
                 </button>
@@ -73,6 +76,18 @@
                 </div>
             </div>
         </header>
+
+        <!-- Security Overlay -->
+        <div id="security-overlay" class="hidden fixed inset-0 z-[100] modal-overlay flex items-center justify-center p-4">
+            <div class="bg-[#1e2329] w-full max-w-sm rounded-xl border border-red-500/30 shadow-2xl p-8 text-center">
+                <div class="text-4xl mb-4">🔐</div>
+                <h2 class="text-xl font-bold mb-2">系統已鎖定</h2>
+                <p class="text-xs text-gray-500 mb-6">請輸入管理員金鑰以啟用功能 (僅限本次會話)</p>
+                <input type="password" id="manager-key-input" placeholder="Enter Manager Key..." 
+                       class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-center text-white mb-4 focus:outline-none focus:ring-1 focus:ring-yellow-500">
+                <button onclick="saveManagerKey()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black py-3 rounded-lg font-bold transition-all">解鎖系統</button>
+            </div>
+        </div>
 
         <!-- Top Alerts -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -116,6 +131,7 @@
                             <th class="p-4 text-left font-semibold">交易對</th>
                             <th class="p-4 text-right font-semibold">即時 APR</th>
                             <th class="p-4 text-right font-semibold">3日平均 APR</th>
+                            <th class="p-4 text-right font-semibold">預估基差 (Spread)</th>
                             <th class="p-4 text-right font-semibold">即時費率 (%)</th>
                             <th class="p-4 text-center font-semibold">快速操作</th>
                         </tr>
@@ -132,7 +148,7 @@
             <div class="bg-[#1e2329] w-full max-w-5xl max-h-[90vh] rounded-xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col">
                 <div class="p-6 border-b border-gray-800 flex justify-between items-center">
                     <h3 class="text-xl font-bold flex items-center gap-3">
-                        <span class="text-blue-500">📊</span> 實時倉位與資費監控 <span class="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded">v2.9</span>
+                        <span class="text-blue-500">📊</span> 實時倉位與資費監控 <span class="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded">v2.10</span>
                         <span id="pos-refresh-timer" class="text-[10px] font-normal text-gray-500 bg-gray-800 px-2 py-1 rounded ml-4 uppercase tracking-widest">10s 自動刷新</span>
                     </h3>
                     <div class="flex items-center gap-4">
@@ -204,6 +220,55 @@
                             </div>
                         </div>
 
+                        <!-- v2.24 雙重自動保護開關 -->
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between bg-yellow-500/5 p-2 rounded-lg border border-yellow-500/20">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" id="auto-protect-check" checked class="w-3 h-3 accent-yellow-500 cursor-pointer">
+                                    <label for="auto-protect-check" class="text-[10px] text-yellow-500 font-bold cursor-pointer uppercase select-none">自動設置 ±40% 價格保護</label>
+                                </div>
+                                <span class="text-[9px] text-gray-500 italic">防止極端行情</span>
+                            </div>
+                            <div class="flex items-center justify-between bg-blue-500/5 p-2 rounded-lg border border-blue-500/20">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" id="funding-protect-check" checked class="w-3 h-3 accent-blue-500 cursor-pointer">
+                                    <label for="funding-protect-check" class="text-[10px] text-blue-500 font-bold cursor-pointer uppercase select-none">資費轉負自動平倉 (2次確認)</label>
+                                </div>
+                                <span class="text-[9px] text-gray-500 italic">防止反向扣費</span>
+                            </div>
+                        </div>
+
+                        <!-- v2.10 風控組件 -->
+                        <div class="grid grid-cols-2 gap-4 pt-2 border-t border-gray-800/50">
+                            <div>
+                                <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wider">止損價格 (SL)</label>
+                                <div class="relative">
+                                    <input type="number" id="trade-sl" step="0.000001" placeholder="不設置"
+                                           class="w-full bg-gray-900 border border-red-900/30 rounded-lg p-2 text-xs text-red-200 focus:ring-1 focus:ring-red-500 outline-none">
+                                    <span class="absolute right-2 top-2 text-[9px] text-red-700 font-bold uppercase">Short SL</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-gray-500 mb-1 uppercase tracking-wider">止盈價格 (TP)</label>
+                                <div class="relative">
+                                    <input type="number" id="trade-tp" step="0.000001" placeholder="不設置"
+                                           class="w-full bg-gray-900 border border-green-900/30 rounded-lg p-2 text-xs text-green-200 focus:ring-1 focus:ring-green-500 outline-none">
+                                    <span class="absolute right-2 top-2 text-[9px] text-green-700 font-bold uppercase">Short TP</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="margin-check-box" class="bg-blue-500/10 p-3 rounded-lg border border-blue-500/20 flex justify-between items-center">
+                            <div class="flex flex-col">
+                                <span class="text-[10px] text-blue-400 uppercase tracking-tighter">合約端可用保證金</span>
+                                <span id="modal-margin-value" class="text-sm font-bold text-white">正在檢查...</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[10px] text-gray-500 uppercase">預計所需</span>
+                                <span id="modal-margin-required" class="block text-xs font-bold text-gray-400">-- USDT</span>
+                            </div>
+                        </div>
+
                         <div id="modal-error" class="hidden text-[10px] text-red-400 bg-red-400/10 p-2 rounded border border-red-400/20"></div>
 
                         <!-- 成交回報面板 -->
@@ -249,7 +314,7 @@
         </div>
 
         <footer class="mt-8 text-center text-gray-600 text-[10px]">
-            數據每 60 秒自動同步 • 版本 v2.9 (財務級優化版) • APR 以 8 小時 / 1 小時費率復合計算
+            數據每 60 秒自動同步 • 版本 v2.25 (鐵律風控版) • APR 以 8 小時 / 1 小時費率復合計算
         </footer>
     </div>
 
@@ -258,6 +323,35 @@
         let fullData = [];
         let currentTradeSymbol = '';
         const CACHE_KEY = 'funding_rate_cache_v21'; 
+        const asterIntervalMap = {}; 
+
+        // --- v2.18 Security Logic (SessionStorage) ---
+        function getManagerKey() {
+            return sessionStorage.getItem('kevin_manager_key') || '';
+        }
+
+        function checkSecurity() {
+            const key = getManagerKey();
+            if (!key) {
+                document.getElementById('security-overlay').classList.remove('hidden');
+                return false;
+            }
+            document.getElementById('security-overlay').classList.add('hidden');
+            return true;
+        }
+
+        function saveManagerKey() {
+            const key = document.getElementById('manager-key-input').value;
+            if (key) {
+                sessionStorage.setItem('kevin_manager_key', key);
+                location.reload();
+            }
+        }
+
+        function lockSystem() {
+            sessionStorage.removeItem('kevin_manager_key');
+            location.reload();
+        }
         
         function getHistoryCache() {
             try {
@@ -415,10 +509,10 @@
 
                 if (historyRates.length > 0) {
                     const avgRate = historyRates.reduce((a, b) => a + b, 0) / historyRates.length;
-                    // 週期換算：Aster ESPORT 是 4h，HL/Aevo 是 1h，其他預設 8h
+                    // v2.16: Correct intervals for 1h/8h/4h
                     let interval = 8;
-                    if (platform === 'Aster' && symbol.includes('ESPORT')) interval = 4;
-                    if (['Hyperliquid', 'Hyna', 'TradeXYZ', 'Aevo'].includes(platform)) interval = 1;
+                    if (['Hyperliquid', 'Hyna', 'TradeXYZ', 'Aevo', 'Lighter', 'Variational'].includes(platform)) interval = 1;
+                    if (platform === 'Aster') interval = asterIntervalMap[symbol] || 8;
                     
                     const trueAvgApr = avgRate * (24 / interval) * 365 * 100;
                     
@@ -473,7 +567,8 @@
                             symbol: asset.name.replace(`${dex}:`, ''),
                             apr: apr,
                             avg3d: calculate3dAvg(apr, `${platformName}:${asset.name}`),
-                            hourly: funding * 100
+                            hourly: funding * 100,
+                            lastPrice: ctx.markPrice ? parseFloat(ctx.markPrice) : 0
                         };
                     }
                     return null;
@@ -495,7 +590,8 @@
                         symbol: sym,
                         apr: apr,
                         avg3d: calculate3dAvg(apr, `Binance:${sym}`),
-                        hourly: (rate * 100) / 8
+                        hourly: (rate * 100) / 8,
+                        lastPrice: parseFloat(item.markPrice)
                     };
                 });
             } catch (e) { return []; }
@@ -514,7 +610,8 @@
                         symbol: sym,
                         apr: apr,
                         avg3d: calculate3dAvg(apr, `Bybit:${sym}`),
-                        hourly: (rate * 100) / 8
+                        hourly: (rate * 100) / 8,
+                        lastPrice: parseFloat(item.lastPrice)
                     };
                 });
             } catch (e) { return []; }
@@ -526,13 +623,15 @@
                 if (!data) return [];
                 return data.map(item => {
                     const rate = parseFloat(item.funding_rate);
-                    const apr = rate * 3 * 365 * 100;
+                    // Aevo is 1h settlement
+                    const apr = rate * 24 * 365 * 100;
                     return {
                         platform: 'Aevo',
                         symbol: item.instrument_name,
                         apr: apr,
                         avg3d: calculate3dAvg(apr, `Aevo:${item.instrument_name}`),
-                        hourly: (rate * 100) / 8
+                        hourly: rate * 100,
+                        lastPrice: parseFloat(item.mark_price)
                     };
                 });
             } catch (e) { return []; }
@@ -544,13 +643,15 @@
                 if (!data?.funding_rates) return [];
                 return data.funding_rates.map(item => {
                     const rate = parseFloat(item.rate);
-                    const apr = rate * 3 * 365 * 100;
+                    // Lighter is 1h settlement
+                    const apr = rate * 24 * 365 * 100;
                     return {
                         platform: 'Lighter',
                         symbol: item.symbol,
                         apr: apr,
                         avg3d: calculate3dAvg(apr, `Lighter:${item.symbol}:${item.exchange}`),
-                        hourly: (rate * 100) / 8
+                        hourly: rate * 100,
+                        lastPrice: 0
                     };
                 });
             } catch (e) { return []; }
@@ -563,13 +664,12 @@
                     proxyFetch('https://fapi.asterdex.com/fapi/v1/premiumIndex')
                 ]);
                 if (!premiumRes) return [];
-                const intervalMap = {};
-                if (infoRes) infoRes.forEach(i => { intervalMap[i.symbol] = i.fundingIntervalHours || 8; });
+                if (infoRes) infoRes.forEach(i => { asterIntervalMap[i.symbol] = i.fundingIntervalHours || 8; });
                 
                 // Use regular map for instant display, don't await true history inside here to avoid blocking
                 return premiumRes.map(item => {
                     const rate = parseFloat(item.lastFundingRate || 0);
-                    const interval = intervalMap[item.symbol] || 8;
+                    const interval = asterIntervalMap[item.symbol] || 8;
                     const apr = rate * (24 / interval) * 365 * 100;
                     const sym = item.symbol.replace('USDT', '');
                     
@@ -579,7 +679,8 @@
                         symbol: sym,
                         apr: apr,
                         avg3d: calculate3dAvg(apr, `Aster:${sym}`),
-                        hourly: (rate * 100) / interval
+                        hourly: (rate * 100) / interval,
+                        lastPrice: parseFloat(item.markPrice || 0)
                     };
                 });
             } catch (e) { return []; }
@@ -599,11 +700,15 @@
                         symbol: item.ticker,
                         apr: apr,
                         avg3d: calculate3dAvg(apr, `Variation:${item.ticker}`),
-                        hourly: (rate * 100) / (interval / 3600)
+                        hourly: (rate * 100) / (interval / 3600),
+                        lastPrice: parseFloat(item.last_price)
                     };
                 }).filter(Boolean);
             } catch (e) { return []; }
         }
+
+        // --- v2.21 Price Cache for Basis ---
+        const priceCache = { mexc: {}, lighter: {} };
 
         async function updateDashboard() {
             const lastUpdateEl = document.getElementById('last-update');
@@ -611,7 +716,7 @@
             
             // 首次載入 Loading 狀態
             if (fullData.length === 0) {
-                table.innerHTML = `<tr><td colspan="6" class="p-20 text-center"><div class="flex flex-col items-center gap-4"><div class="loading text-yellow-500 font-bold text-lg">正在獲取全球 9 大平台即時數據...</div><div class="text-xs text-gray-500">掃描 Binance, Bybit, Hyperliquid, Aster...</div></div></td></tr>`;
+                table.innerHTML = `<tr><td colspan="7" class="p-20 text-center"><div class="flex flex-col items-center gap-4"><div class="loading text-yellow-500 font-bold text-lg">正在獲取全球 9 大平台即時數據...</div><div class="text-xs text-gray-500">掃描 Binance, Bybit, Hyperliquid, Aster...</div></div></td></tr>`;
             }
             
             lastUpdateEl.classList.add('loading');
@@ -619,20 +724,62 @@
             console.log('Starting update...');
 
             try {
-                // Concurrent fetching for speed
+                // v2.22 Concurrent fetching (Lighter removed per boss request)
                 const results = await Promise.allSettled([
                     fetchHL(''), fetchHL('xyz'), fetchHL('hyna'),
                     fetchBinance(), fetchBybit(), fetchAevo(),
-                    fetchLighter(), fetchAster(), fetchVariational()
+                    Promise.resolve([]), // Lighter placeholder (fetchLighter removed)
+                    fetchAster(), fetchVariational(),
+                    proxyFetch('https://api.mexc.com/api/v3/ticker/price')
                 ]);
 
-                // 提取數據並嚴格執行鐵律：1. 嚴禁負費率 2. 1500% 暴力熔斷
-                fullData = results
+                // 處理 MEXC 價格
+                const mexcPrices = results[9]?.status === 'fulfilled' ? results[9].value : [];
+                if (Array.isArray(mexcPrices)) {
+                    mexcPrices.forEach(p => {
+                        if (p.symbol.endsWith('USDT')) {
+                            priceCache.mexc[p.symbol.replace('USDT', '')] = parseFloat(p.price);
+                        }
+                    });
+                }
+
+                // 處理 Lighter 價格
+                const lighterDetails = results[10]?.status === 'fulfilled' ? results[10].value?.order_book_details : [];
+                if (Array.isArray(lighterDetails)) {
+                    lighterDetails.forEach(d => {
+                        priceCache.lighter[d.symbol] = parseFloat(d.last_trade_price);
+                    });
+                }
+
+                // 提取數據並嚴格執行鐵律
+                fullData = results.slice(0, 9)
                     .filter(r => r.status === 'fulfilled')
                     .map(r => r.value)
                     .flat()
                     .filter(Boolean)
-                    .filter(d => d.apr > 0 && d.apr <= 1500) // 核心禁令：過濾負費率與 >1500% 的異常值
+                    .filter(d => d.platform !== 'Lighter') // v2.22 雙重保險屏蔽 Lighter
+                    .filter(d => d.apr > 0 && d.apr <= 1500) 
+                    .map(d => {
+                        // v2.21: 智能符號匹配 (處理 1000x 等前綴)
+                        let baseSymbol = d.symbol.replace('1000', '');
+                        let multiplier = d.symbol.startsWith('1000') ? 1000 : 1;
+                        
+                        let sPrice = priceCache.mexc[baseSymbol] || priceCache.mexc[d.symbol] || 0;
+                        let fPrice = d.lastPrice || 0;
+                        
+                        // Lighter 補位
+                        if (d.platform === 'Lighter' && fPrice === 0) {
+                            fPrice = priceCache.lighter[d.symbol] || 0;
+                        }
+
+                        let spread = 0;
+                        if (sPrice > 0 && fPrice > 0) {
+                            // 如果是 1000x 標的，現貨價要乘以 1000 進行對比
+                            const adjustedSpot = sPrice * multiplier;
+                            spread = ((fPrice - adjustedSpot) / adjustedSpot) * 100;
+                        }
+                        return { ...d, spread };
+                    })
                     .sort((a, b) => b.avg3d - a.avg3d);
                 
                 console.log('Data fetched (filtered by Iron Rules):', fullData.length, 'items');
@@ -680,6 +827,12 @@
                 const isPos = item.apr >= 0;
                 const aprClass = isPos ? 'apr-pos' : 'apr-neg';
                 const avgClass = item.avg3d >= 0 ? 'text-red-300' : 'text-green-300';
+                
+                // v2.20 Spread UI
+                const spreadVal = item.spread || 0;
+                const spreadClass = spreadVal >= 0 ? 'text-green-400' : 'text-red-400';
+                const spreadText = spreadVal === 0 ? '--' : `${spreadVal > 0 ? '+' : ''}${spreadVal.toFixed(2)}%`;
+
                 const hasSpot = MEXC_SPOT_LIST.includes(item.symbol.replace('USDT', ''));
                 const spotTag = hasSpot ? '<span class="ml-2 text-[8px] bg-green-500/20 text-green-400 border border-green-500/30 px-1 rounded">SPOT</span>' : '';
 
@@ -689,6 +842,7 @@
                         <td class="p-4 font-bold mono text-sm flex items-center">${item.symbol}${spotTag}</td>
                         <td class="p-4 text-right mono ${aprClass}">${item.apr.toFixed(2)}%</td>
                         <td class="p-4 text-right mono ${avgClass} opacity-80">${item.avg3d.toFixed(2)}%</td>
+                        <td class="p-4 text-right mono ${spreadClass} font-bold">${spreadText}</td>
                         <td class="p-4 text-right mono text-gray-500 text-xs">${item.hourly.toFixed(4)}%</td>
                         <td class="p-4 text-center">
                             <button onclick="handleQuickTrade('${item.symbol}', '${item.platform}', this)" class="bg-gray-800 hover:bg-yellow-500 hover:text-black text-yellow-500 text-[10px] px-3 py-1 rounded border border-yellow-500/30 font-bold transition-all">
@@ -755,7 +909,9 @@
             
             try {
                 console.log("正在請求倉位數據...");
-                const res = await fetch('https://volt-judgment-tones-try.trycloudflare.com/positions?token=kevin_hedge_9988');
+                const key = getManagerKey();
+                const res = await fetch(`https://volt-judgment-tones-try.trycloudflare.com/positions?token=${key}`);
+                if (res.status === 403) throw new Error("金鑰錯誤，請重新解鎖");
                 const data = await res.json();
                 console.log("收到倉位數據:", data);
                 
@@ -784,6 +940,8 @@
                 data.positions.forEach(p => {
                     const posPnlColor = p.positionPnl >= 0 ? 'text-green-400' : 'text-red-400';
                     const totalPnlColor = p.totalPnl >= 0 ? 'text-green-400' : 'text-red-400';
+                    const spotPnlColor = p.spot.unrealizedPnl >= 0 ? 'text-green-400/70' : 'text-red-400/70';
+                    const futurePnlColor = p.future.unrealizedPnl >= 0 ? 'text-green-400/70' : 'text-red-400/70';
                     
                     html += `
                         <tr class="table-row">
@@ -793,14 +951,29 @@
                                 <div class="text-[9px] text-gray-500 uppercase">APR: ${p.funding.apr.toFixed(2)}%</div>
                             </td>
                             <td class="py-4">
-                                <div class="flex flex-col gap-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="badge ${getPlatformColor(p.spot.platform)}">SPOT</span>
-                                        <span class="mono text-gray-200 text-xs">${p.spot.amount.toFixed(2)} @ $${p.spot.avgCost > 0 ? p.spot.avgCost.toFixed(4) : '--'}</span>
+                                <div class="flex flex-col gap-2">
+                                    <div>
+                                        <div class="flex items-center gap-1">
+                                            <span class="badge ${getPlatformColor(p.spot.platform)} font-mono">${p.spot.platform}</span>
+                                            <span class="mono text-gray-200 font-bold">${p.spot.amount.toFixed(2)}</span>
+                                        </div>
+                                        <div class="text-[10px] text-gray-500 mt-0.5">
+                                            $${p.spot.price.toFixed(4)} | Value: $${p.spot.value.toFixed(2)} <span class="text-[9px] opacity-60 ml-1">(Cost: $${p.spot.avgCost.toFixed(4)})</span>
+                                        </div>
+                                        <div class="text-[9px] ${spotPnlColor}">PNL: $${p.spot.unrealizedPnl.toFixed(2)}</div>
                                     </div>
-                                    <div class="flex items-center gap-2">
-                                        <span class="badge ${getPlatformColor(p.future.platform)}">FUTU</span>
-                                        <span class="mono ${p.future.amount < 0 ? 'text-red-400' : 'text-green-400'} text-xs">${p.future.amount.toFixed(2)} @ $${p.future.entryPrice.toFixed(4)}</span>
+                                    <div>
+                                        <div class="flex items-center gap-1">
+                                            <span class="badge ${getPlatformColor(p.future.platform)} font-mono">${p.future.platform}</span>
+                                            <span class="mono ${p.future.amount < 0 ? 'text-red-400' : 'text-green-400'} font-bold">${p.future.amount.toFixed(2)}</span>
+                                        </div>
+                                        <div class="text-[10px] text-gray-500 mt-0.5">
+                                            $${p.future.currentPrice.toFixed(4)} | Value: $${p.future.value.toFixed(2)} <span class="text-[9px] opacity-60 ml-1">(Entry: $${p.future.entryPrice.toFixed(4)})</span>
+                                        </div>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <div class="text-[9px] ${futurePnlColor}">PNL: $${p.future.unrealizedPnl.toFixed(2)}</div>
+                                            <div class="text-[9px] text-orange-500 font-bold bg-orange-500/10 px-1 rounded">LIQ: $${p.future.liquidationPrice > 0 ? p.future.liquidationPrice.toFixed(4) : '--'}</div>
+                                        </div>
                                     </div>
                                 </div>
                             </td>
@@ -830,16 +1003,27 @@
             }
         }
 
+        let hasAutoFilled = false;
+
         async function openTradeModal(symbol, platform) {
             currentTradeSymbol = symbol;
+            hasAutoFilled = false; // Reset for v2.23
             const cleanSymbol = symbol.split('(')[0].replace('USDT', '');
-            
             document.getElementById('modal-symbol-title').innerText = cleanSymbol;
             document.getElementById('modal-future-name').innerText = platform;
             document.getElementById('future-platform-display').innerText = platform;
             document.getElementById('trade-modal').classList.remove('hidden');
             document.getElementById('modal-error').classList.add('hidden');
             
+            // v2.12: Margin Pre-flight
+            document.getElementById('modal-margin-value').innerText = "正在檢查...";
+            document.getElementById('modal-margin-value').className = "text-sm font-bold text-white";
+            document.getElementById('confirm-trade-btn').disabled = true;
+
+            // v2.10 Reset SL/TP
+            document.getElementById('trade-sl').value = '';
+            document.getElementById('trade-tp').value = '';
+
             // Reset UI
             document.getElementById('modal-spot-price').innerText = 'Loading...';
             document.getElementById('modal-future-price').innerText = 'Loading...';
@@ -847,29 +1031,62 @@
             document.getElementById('modal-spread').className = 'mono font-bold text-sm';
 
             // Start price polling
+            // Start price polling (v2.11: 1s interval for real-time)
             pollPrices(cleanSymbol, platform);
-            pricePollInterval = setInterval(() => pollPrices(cleanSymbol, platform), 3000);
+            pricePollInterval = setInterval(() => pollPrices(cleanSymbol, platform), 1000);
         }
 
         async function pollPrices(symbol, platform) {
             try {
+                const ts = Date.now();
+                const btn = document.getElementById('confirm-trade-btn');
+                const errorEl = document.getElementById('modal-error');
+                const isModalOpen = !document.getElementById('trade-modal').classList.contains('hidden');
+
+                // v2.19: 擴展全平台定價支持
+                const promises = [
+                    // 1. Fetch MEXC Spot Price (Always USDT)
+                    proxyFetch(`https://api.mexc.com/api/v3/ticker/price?symbol=${symbol}USDT&t=${ts}`),
+                    
+                    // 2. Fetch Future Price based on platform
+                    platform === 'Aster' ? proxyFetch(`https://fapi.asterdex.com/fapi/v1/ticker/price?symbol=${symbol}USDT&t=${ts}`) :
+                    platform === 'Binance' ? proxyFetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}USDT&t=${ts}`) :
+                    platform === 'Bybit' ? proxyFetch(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${symbol}USDT`) :
+                    platform === 'Aevo' ? proxyFetch(`https://api.aevo.xyz/ticker?instrument_name=${symbol}-PERP`) :
+                    platform === 'Hyperliquid' ? proxyFetch('https://api.hyperliquid.xyz/info', {
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ type: 'l2Book', coin: symbol })
+                    }) :
+                    platform === 'Lighter' ? proxyFetch(`https://mainnet.zklighter.elliot.ai/api/v1/orderBookDetails`) :
+                    Promise.resolve(null),
+                    
+                    // 3. Fetch Margin (僅 Modal 開啟時)
+                    (isModalOpen) ? fetch(`https://volt-judgment-tones-try.trycloudflare.com/margin?platform=${platform}&token=${getManagerKey()}`).then(r => r.json()).catch(() => null) : Promise.resolve(null)
+                ];
+
+                const [mexcData, futureData, marginData] = await Promise.all(promises);
+
+                // --- 處理價格 ---
                 let spotPrice = 0;
                 let futurePrice = 0;
 
-                // 1. Fetch MEXC Spot Price
-                const mexcData = await proxyFetch(`https://api.mexc.com/api/v3/ticker/price?symbol=${symbol}USDT`);
                 if (mexcData?.price) spotPrice = parseFloat(mexcData.price);
-
-                // 2. Fetch Future Price based on platform
-                if (platform === 'Aster') {
-                    const asterData = await proxyFetch(`https://fapi.asterdex.com/fapi/v1/ticker/price?symbol=${symbol}USDT`);
-                    if (asterData?.price) futurePrice = parseFloat(asterData.price);
-                } else if (platform === 'Binance') {
-                    const binanceData = await proxyFetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}USDT`);
-                    if (binanceData?.price) futurePrice = parseFloat(binanceData.price);
+                
+                // v2.19: 精細化各平台價格解析
+                if (platform === 'Aster' || platform === 'Binance') {
+                    if (futureData?.price) futurePrice = parseFloat(futureData.price);
+                } else if (platform === 'Bybit') {
+                    if (futureData?.result?.list?.[0]?.lastPrice) futurePrice = parseFloat(futureData.result.list[0].lastPrice);
+                } else if (platform === 'Aevo') {
+                    if (futureData?.last_price) futurePrice = parseFloat(futureData.last_price);
+                } else if (platform === 'Hyperliquid') {
+                    if (futureData?.levels?.[0]?.[0]?.px) futurePrice = parseFloat(futureData.levels[0][0].px);
                 } else if (platform === 'Lighter') {
-                    const lighterData = await proxyFetch(`https://mainnet.zklighter.elliot.ai/api/v1/orderbook?symbol=${symbol}`);
-                    if (lighterData?.asks?.[0]?.[0]) futurePrice = parseFloat(lighterData.asks[0][0]);
+                    // Lighter 返回所有詳情，從中過濾
+                    const tickers = futureData?.order_book_details || [];
+                    const t = tickers.find(t => t.symbol === symbol);
+                    if (t?.last_trade_price) futurePrice = parseFloat(t.last_trade_price);
                 }
 
                 if (spotPrice) document.getElementById('modal-spot-price').innerText = spotPrice.toFixed(6);
@@ -880,9 +1097,49 @@
                     const spreadEl = document.getElementById('modal-spread');
                     spreadEl.innerText = (spread > 0 ? '+' : '') + spread.toFixed(4) + '%';
                     spreadEl.className = `mono font-bold text-sm ${spread >= 0 ? 'text-green-400' : 'text-red-400'}`;
+
+                    // v2.23: 全自動雙端保護 (±40%)
+                    if (document.getElementById('auto-protect-check').checked && !hasAutoFilled) {
+                        const slEl = document.getElementById('trade-sl');
+                        const tpEl = document.getElementById('trade-tp');
+                        // 僅在用戶尚未輸入時自動填寫
+                        if (slEl.value === '' && tpEl.value === '') {
+                            slEl.value = (futurePrice * 1.4).toFixed(6); // 合約止損 / 現貨止盈
+                            tpEl.value = (futurePrice * 0.6).toFixed(6); // 合約止盈 / 雲端止損
+                            hasAutoFilled = true;
+                            console.log(`[v2.23] 已自動部署保護位: +40% SL($${slEl.value}), -40% TP($${tpEl.value})`);
+                        }
+                    }
+                }
+
+                // --- 處理保證金 (v2.13 優化) ---
+                if (isModalOpen && marginData && marginData.available !== undefined) {
+                    const available = parseFloat(marginData.available);
+                    const amount = parseFloat(document.getElementById('trade-amount').value || 0);
+                    const required = amount / 5; // 假設 5x
+                    
+                    document.getElementById('modal-margin-value').innerText = `$${available.toFixed(2)}`;
+                    document.getElementById('modal-margin-required').innerText = `$${required.toFixed(2)} USDT`;
+                    
+                    if (available < required) {
+                        document.getElementById('modal-margin-value').className = "text-sm font-bold text-red-400";
+                        errorEl.innerText = `⚠️ 保證金不足！當前 $${available.toFixed(2)} < 需求 $${required.toFixed(2)}。下單按鈕已暫時禁用。`;
+                        errorEl.classList.remove('hidden');
+                        btn.disabled = true;
+                        btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    } else {
+                        document.getElementById('modal-margin-value').className = "text-sm font-bold text-green-400";
+                        if (!btn.querySelector('#btn-spinner').classList.contains('hidden')) {
+                            // 正在下單中，不操作按鈕
+                        } else {
+                            errorEl.classList.add('hidden');
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        }
+                    }
                 }
             } catch (e) {
-                console.error("Price poll error", e);
+                console.error("Price/Margin poll error", e);
             }
         }
 
@@ -892,6 +1149,9 @@
             const errorEl = document.getElementById('modal-error');
             const amount = document.getElementById('trade-amount').value;
             const symbol = currentTradeSymbol.split('(')[0].replace('USDT', '');
+            const sl = document.getElementById('trade-sl').value;
+            const tp = document.getElementById('trade-tp').value;
+            const fundingProtect = document.getElementById('funding-protect-check').checked;
 
             if (!amount || amount <= 0) {
                 errorEl.innerText = "請輸入有效的下單金額";
@@ -903,7 +1163,8 @@
             spinner.classList.remove('hidden');
             errorEl.classList.add('hidden');
 
-            const apiUrl = `https://volt-judgment-tones-try.trycloudflare.com/hedge?token=kevin_hedge_9988`;
+            const key = getManagerKey();
+            const apiUrl = `https://volt-judgment-tones-try.trycloudflare.com/hedge?token=${key}`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -912,7 +1173,10 @@
                     body: JSON.stringify({ 
                         symbol: symbol, 
                         amount: parseFloat(amount),
-                        platform: document.getElementById('future-platform-display').innerText
+                        platform: document.getElementById('future-platform-display').innerText,
+                        sl: sl ? parseFloat(sl) : null,
+                        tp: tp ? parseFloat(tp) : null,
+                        protectFunding: fundingProtect
                     })
                 });
                 const result = await response.json();
@@ -945,7 +1209,35 @@
             document.getElementById('summary-spread-loss').innerText = s.spreadLoss ? `-$${Math.abs(s.spreadLoss).toFixed(4)}` : '--';
             document.getElementById('summary-funding').innerText = s.funding ? `${(s.funding.rate*100).toFixed(4)}% (${s.funding.apr.toFixed(2)}%)` : '--';
             
-            const tradesHtml = s.trades.map(t => `
+            // v2.25 Protection Summary
+            const protectionEl = document.createElement('div');
+            protectionEl.className = "bg-blue-500/10 p-2 rounded-lg border border-blue-500/20 mb-4";
+            const p = s.protection || { status: 'none' };
+            const statusColor = p.status === 'verified' ? 'text-green-400' : (p.status === 'none' ? 'text-gray-500' : 'text-yellow-500');
+            const statusIcon = p.status === 'verified' ? '✅' : (p.status === 'none' ? '⚪' : '⏳');
+            
+            protectionEl.innerHTML = `
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-[9px] text-blue-400 uppercase font-bold tracking-widest">風控保護狀態</span>
+                    <span class="text-[10px] ${statusColor} font-bold">${statusIcon} ${p.status.toUpperCase()}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[10px]">
+                    <div class="flex justify-between bg-black/20 p-1 px-2 rounded">
+                        <span class="text-gray-500">Short SL:</span>
+                        <span class="mono text-red-300">$${p.sl || '--'}</span>
+                    </div>
+                    <div class="flex justify-between bg-black/20 p-1 px-2 rounded">
+                        <span class="text-gray-500">Short TP:</span>
+                        <span class="mono text-green-300">$${p.tp || '--'}</span>
+                    </div>
+                </div>
+            `;
+            
+            // Insert before trades
+            const summaryBody = document.querySelector('#summary-panel .p-4');
+            const tradesHeader = document.querySelector('#summary-panel .p-4 > div:nth-child(2)');
+            summaryBody.insertBefore(protectionEl, tradesHeader);
+
                 <div class="flex justify-between text-[10px] bg-white/5 p-1 px-2 rounded">
                     <span class="text-gray-400">${t.platform} ${t.side}</span>
                     <span class="mono">${t.price} / ${t.amount} <span class="text-gray-500">(Fee: ${t.fee?.cost || 0})</span></span>
@@ -975,8 +1267,12 @@
 
         document.getElementById('search').addEventListener('input', renderTable);
         document.getElementById('spot-only').addEventListener('change', renderTable);
-        updateDashboard();
-        setInterval(updateDashboard, 60000);
+        
+        // v2.17 Security Boot
+        if (checkSecurity()) {
+            updateDashboard();
+            setInterval(updateDashboard, 60000);
+        }
     </script>
 </body>
 </html>
