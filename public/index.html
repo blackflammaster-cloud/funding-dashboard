@@ -733,7 +733,8 @@
                     fetchBinance(), fetchBybit(), fetchAevo(),
                     Promise.resolve([]), // Lighter placeholder (fetchLighter removed)
                     fetchAster(), fetchVariational(),
-                    proxyFetch('https://api.mexc.com/api/v3/ticker/price')
+                    proxyFetch('https://api.mexc.com/api/v3/ticker/bookTicker'),
+                    proxyFetch('https://fapi.asterdex.com/fapi/v1/ticker/bookTicker')
                 ]);
 
                 // 處理 MEXC 價格
@@ -741,7 +742,19 @@
                 if (Array.isArray(mexcPrices)) {
                     mexcPrices.forEach(p => {
                         if (p.symbol.endsWith('USDT')) {
-                            priceCache.mexc[p.symbol.replace('USDT', '')] = parseFloat(p.price);
+                            // v2.28 統一外層表格 MEXC 盤口價 (賣一價 Ask)
+                            priceCache.mexc[p.symbol.replace('USDT', '')] = parseFloat(p.askPrice || p.price);
+                        }
+                    });
+                }
+                
+                // v2.28 處理 Aster BookTicker (Bid)
+                const asterBookTicker = results[10]?.status === 'fulfilled' ? results[10].value : [];
+                if (Array.isArray(asterBookTicker)) {
+                    asterBookTicker.forEach(p => {
+                        if (p.symbol.endsWith('USDT')) {
+                            priceCache.asterBook = priceCache.asterBook || {};
+                            priceCache.asterBook[p.symbol.replace('USDT', '')] = parseFloat(p.bidPrice || p.price);
                         }
                     });
                 }
@@ -769,6 +782,11 @@
                         
                         let sPrice = priceCache.mexc[baseSymbol] || priceCache.mexc[d.symbol] || 0;
                         let fPrice = d.lastPrice || 0;
+                        
+                        // v2.28 優先使用 Aster 真實盤口買一價 (Bid) 計算表格外層 Spread
+                        if (d.platform === 'Aster' && priceCache.asterBook && priceCache.asterBook[d.symbol]) {
+                            fPrice = priceCache.asterBook[d.symbol];
+                        }
                         
                         // Lighter 補位
                         if (d.platform === 'Lighter' && fPrice === 0) {
