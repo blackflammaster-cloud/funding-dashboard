@@ -17,12 +17,15 @@ const CONFIG = {
 
 function getIntervalHours(nextFundingTimeMs) {
     if (!nextFundingTimeMs || nextFundingTimeMs == 0) return 8;
-    const nextTs = Math.floor(parseInt(nextFundingTimeMs) / 1000);
-    if (nextTs % 3600 !== 0) return 1;
-    if (nextTs % 28800 === 0) return 8;
-    if (nextTs % 14400 === 0) return 4;
-    if (nextTs % 7200 === 0) return 2;
-    return 1;
+    const now = Date.now();
+    const next = parseInt(nextFundingTimeMs);
+    // 從「距下次結算的時間」反推 interval
+    const diffHours = (next - now) / 3600000;
+    // 下次結算一定在 0~interval 小時內，取最接近的標準值
+    if (diffHours <= 1.1) return 1;
+    if (diffHours <= 2.1) return 2;
+    if (diffHours <= 4.1) return 4;
+    return 8;
 }
 
 async function getFundingData() {
