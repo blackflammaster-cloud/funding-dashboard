@@ -759,13 +759,7 @@
                     });
                 }
 
-                // 處理 Lighter 價格
-                const lighterDetails = results[10]?.status === 'fulfilled' ? results[10].value?.order_book_details : [];
-                if (Array.isArray(lighterDetails)) {
-                    lighterDetails.forEach(d => {
-                        priceCache.lighter[d.symbol] = parseFloat(d.last_trade_price);
-                    });
-                }
+                // Lighter 已移除，不再處理 Lighter 價格 (v2.22 / v2.28)
 
                 // 提取數據並嚴格執行鐵律
                 fullData = results.slice(0, 9)
